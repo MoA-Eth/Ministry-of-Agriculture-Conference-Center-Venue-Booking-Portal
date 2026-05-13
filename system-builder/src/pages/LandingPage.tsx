@@ -428,12 +428,12 @@ export default function LandingPage() {
 
           <div className="hidden lg:flex items-center gap-3 sm:gap-4 shrink-0">
             {token ? (
-              <button onClick={() => navigate('/app')} className="px-4 xl:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border border-[#268053] text-[#268053] rounded-full hover:bg-emerald-50 transition-all">
+              <button onClick={() => navigate('/app')} className="px-4 xl:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-2 border-[#268053] text-[#268053] rounded-full hover:bg-emerald-50 transition-all">
                 Dashboard
               </button>
             ) : (
               <>
-                <button onClick={() => navigate('/login')} className="px-4 xl:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 rounded-full hover:border-[#268053] hover:text-[#268053] transition-all">
+                <button onClick={() => navigate('/login')} className="px-4 xl:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-2 border-slate-200 text-slate-600 rounded-full hover:border-[#268053] hover:text-[#268053] transition-all">
                   Log In
                 </button>
                 <button onClick={() => navigate('/register')} className="px-5 xl:px-8 py-2 sm:py-2.5 text-xs sm:text-sm font-bold bg-[#268053] text-white rounded-full hover:bg-[#1b4332] transition-all shadow-md">
@@ -446,12 +446,12 @@ export default function LandingPage() {
           {/* MOBILE & TABLET ACTION BUTTONS */}
           <div className="xl:hidden flex items-center gap-2 sm:gap-3">
             {token ? (
-              <button onClick={() => navigate('/app')} className="px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-50 text-[#268053] rounded-full border border-emerald-200 shadow-sm">
+              <button onClick={() => navigate('/app')} className="px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-50 text-[#268053] rounded-full border-2 border-emerald-200 shadow-sm">
                 Dashboard
               </button>
             ) : (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <button onClick={() => navigate('/login')} className="px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-[#268053] rounded-full border border-[#268053]/30 shadow-sm">
+                <button onClick={() => navigate('/login')} className="px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-[#268053] rounded-full border-2 border-[#268053]/30 shadow-sm">
                   Login
                 </button>
                 <button onClick={() => navigate('/register')} className="hidden xs:flex px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-[#268053] text-white rounded-full shadow-sm">
