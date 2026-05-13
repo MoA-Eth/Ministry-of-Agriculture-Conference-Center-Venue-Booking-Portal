@@ -50,8 +50,14 @@ class RegisterSerializer(serializers.Serializer):
         email = validated_data['email']
         name = validated_data['name']
         password = validated_data['password']
+        
+        name_parts = name.split(' ')
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+        
         django_user = User.objects.create_user(
-            username=email, email=email, password=password, first_name=name.split(' ')[0]
+            username=email, email=email, password=password, 
+            first_name=first_name, last_name=last_name
         )
         return SystemUser.objects.create(
             user=django_user, name=name, email=email, 
@@ -77,13 +83,21 @@ class SystemUserSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        name = validated_data.get('name', '')
+        email = validated_data.get('email', '')
+        
         django_user = None
         if password:
+            name_parts = name.split(' ')
+            first_name = name_parts[0]
+            last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            
             django_user = User.objects.create_user(
-                username=validated_data['email'], 
-                email=validated_data['email'], 
+                username=email, 
+                email=email, 
                 password=password, 
-                first_name=validated_data['name'].split(' ')[0]
+                first_name=first_name,
+                last_name=last_name
             )
         validated_data['user'] = django_user
         return SystemUser.objects.create(**validated_data)
@@ -91,15 +105,34 @@ class SystemUserSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        new_email = validated_data.get('email', instance.email)
+        new_name = validated_data.get('name', instance.name)
+        
+        # Update SystemUser instance
         for attr, value in validated_data.items(): 
             setattr(instance, attr, value)
         instance.save()
+        
+        # Sync with Django User if linked
         if instance.user:
-            instance.user.username = validated_data.get('email', instance.user.username)
-            instance.user.email = validated_data.get('email', instance.user.email)
-            if password: 
-                instance.user.set_password(password)
-            instance.user.save()
+            try:
+                instance.user.username = new_email
+                instance.user.email = new_email
+                
+                # Sync Name components
+                if 'name' in validated_data:
+                    name_parts = new_name.split(' ')
+                    instance.user.first_name = name_parts[0]
+                    instance.user.last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+                
+                if password: 
+                    instance.user.set_password(password)
+                
+                instance.user.save()
+            except Exception as e:
+                # If username is already taken, this might throw IntegrityError
+                raise serializers.ValidationError({'error': f"Failed to update linked login account: {str(e)}"})
+                
         return instance
 
 class VenueSerializer(serializers.ModelSerializer):

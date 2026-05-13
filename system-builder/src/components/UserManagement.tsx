@@ -142,7 +142,21 @@ export default function UserManagement() {
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
+      // SAFE JSON PARSING
+      let data: any = null;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch (e) {
+          console.error("JSON Parse Error:", e);
+        }
+      } else if (!res.ok) {
+        // If not OK and not JSON, it's likely an HTML error page from Django
+        const text = await res.text();
+        console.error("Server HTML Error:", text.substring(0, 500));
+        throw new Error(`Server Error (${res.status}): The server returned an unexpected response. This usually happens when the backend crashes.`);
+      }
 
       if (!res.ok) {
         let errMsg = `Failed to ${editingUserId ? 'update' : 'create'} user`;
@@ -150,6 +164,8 @@ export default function UserManagement() {
         else if (data?.error) errMsg = data.error;
         else if (data?.email) errMsg = `Email: ${Array.isArray(data.email) ? data.email[0] : data.email}`;
         else if (data?.non_field_errors) errMsg = data.non_field_errors[0];
+        else if (res.status === 404) errMsg = "User endpoint not found (404).";
+        else if (res.status === 500) errMsg = "Internal Server Error (500). Please check backend logs.";
         throw new Error(errMsg);
       }
 
