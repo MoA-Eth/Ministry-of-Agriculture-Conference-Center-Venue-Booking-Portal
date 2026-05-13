@@ -1,0 +1,26 @@
+# Environments and Secrets
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Node / React
+node_modules/
+dist/
+build/
+.npm
+npm-debug.log
+
+# OS Files
+.DS_Store
+Thumbs.db
