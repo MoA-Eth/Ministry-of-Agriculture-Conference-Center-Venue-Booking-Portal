@@ -14,37 +14,48 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ✅ FIXED: use --target instead of --prefix
+# --prefix puts scripts in /install/bin which won't be on PATH in runtime.
+# --target puts everything flat in /install so PYTHONPATH picks it up cleanly.
+RUN pip install --no-cache-dir --target=/install -r requirements.txt
 
 # ---------- Stage 2: Runtime ----------
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Runtime deps only (libpq for psycopg2)
+# ✅ FIXED: added curl for the compose healthcheck
+# curl is needed by: docker-compose healthcheck → curl http://localhost:8000/api/health/
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 && \
+    apt-get install -y --no-install-recommends libpq5 curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
-COPY --from=builder /install /usr/local
+COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 
 # Copy project source
 COPY . .
 
-# Collect static files (uses SECRET_KEY placeholder at build time)
-RUN SECRET_KEY=build-placeholder python manage.py collectstatic --no-input
+# ✅ FIXED: create media dir and set ownership BEFORE switching to appuser
+# The media volume is mounted as root at runtime — appuser needs write access
+# to save uploaded files (paper submissions, profile photos, etc.)
+RUN adduser --disabled-password --no-create-home appuser && \
+    mkdir -p /app/media /app/staticfiles && \
+    chown -R appuser:appuser /app/media /app/staticfiles
 
-# Create a non-root user for security
-RUN adduser --disabled-password --no-create-home appuser
+# ✅ REMOVED: collectstatic from build time
+# Reason: it's already in docker-compose command: python manage.py collectstatic --no-input
+# Running it here with a fake SECRET_KEY is redundant and can hide real errors.
+# Let it run at container startup where real env vars are available.
+
 USER appuser
 
 EXPOSE 8000
 
-# Run Gunicorn bound to 0.0.0.0:8000
 CMD ["gunicorn", "conference_backend.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "3", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
+    "--bind", "0.0.0.0:8000", \
+    "--workers", "3", \
+    "--timeout", "120", \
+    "--access-logfile", "-", \
+    "--error-logfile", "-"]

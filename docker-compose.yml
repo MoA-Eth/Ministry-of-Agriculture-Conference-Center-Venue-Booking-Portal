@@ -9,6 +9,7 @@
 # ============================================================
 
 services:
+
   # ---------- PostgreSQL Database ----------
   db:
     image: postgres:16-alpine
@@ -19,10 +20,12 @@ services:
       POSTGRES_DB: ${DB_NAME:-conference_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-    ports:
-      - "5432:5432"
+    # ✅ FIXED: removed ports — db is only reachable inside Docker network
+    #    never expose 5432 publicly on a production server
+    networks:
+      - backend_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,16 +42,19 @@ services:
         condition: service_healthy
     volumes:
       - media_data:/app/media
+      - static_data:/app/staticfiles # ✅ NEW: share static files with Nginx
     environment:
       - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
       - DEBUG=${DEBUG:-False}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-10.10.20.251,localhost}
       - DB_NAME=${DB_NAME:-conference_db}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
       - DB_HOST=db
       - DB_PORT=5432
-      - CORS_ALLOW_ALL_ORIGINS=${CORS_ALLOW_ALL_ORIGINS:-True}
+      # ✅ FIXED: don't allow all origins in production
+      - CORS_ALLOW_ALL_ORIGINS=False
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://10.10.20.251}
       - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
       - EMAIL_PORT=${EMAIL_PORT:-587}
       - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
@@ -56,10 +62,20 @@ services:
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
-    ports:
-      - "8000:8000"
+    # ✅ FIXED: removed ports — backend only reachable via Nginx internally
+    networks:
+      - backend_net
+      - proxy_net
+    # ✅ NEW: healthcheck so Nginx waits for backend to be truly ready
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     command: >
       sh -c "python manage.py migrate --no-input &&
+             python manage.py collectstatic --no-input &&
              gunicorn conference_backend.wsgi:application
              --bind 0.0.0.0:8000
              --workers 3
@@ -67,7 +83,7 @@ services:
              --access-logfile -
              --error-logfile -"
 
-  # ---------- React Frontend (Nginx) ----------
+  # ---------- React Frontend ----------
   frontend:
     image: moa-frontend:latest
     build:
@@ -78,9 +94,40 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
-      - "80:80"
+    # ✅ FIXED: no ports exposed — Nginx proxies to this internally
+    networks:
+      - proxy_net
 
+  # ---------- Nginx Reverse Proxy ----------  ✅ NEW SERVICE
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    ports:
+      - "80:80" # HTTP  — only Nginx is public-facing
+      # - "443:443"   # uncomment after adding SSL
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/app/staticfiles:ro # serve Django static files directly
+      - media_data:/app/media:ro # serve Django media files directly
+    networks:
+      - proxy_net
+
+# ---------- Networks ----------
+networks:
+  backend_net:
+    # db and backend only — db is never reachable from Nginx or frontend
+    driver: bridge
+  proxy_net:
+    # Nginx, frontend, backend — public-facing layer
+    driver: bridge
+
+# ---------- Volumes ----------
 volumes:
   postgres_data:
   media_data:
+  static_data: # ✅ NEW: Django collectstatic output shared with Nginx
