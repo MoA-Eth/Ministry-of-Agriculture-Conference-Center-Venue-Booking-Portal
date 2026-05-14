@@ -18,7 +18,7 @@ COPY requirements.txt .
 # ✅ FIXED: use --target instead of --prefix
 # --prefix puts scripts in /install/bin which won't be on PATH in runtime.
 # --target puts everything flat in /install so PYTHONPATH picks it up cleanly.
-RUN pip install --no-cache-dir --target=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install  -r requirements.txt
 
 # ---------- Stage 2: Runtime ----------
 FROM python:3.12-slim
@@ -32,8 +32,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
-COPY --from=builder /install /usr/local/lib/python3.12/site-packages
-
+COPY --from=builder /install /usr/local
 # Copy project source
 COPY . .
 
