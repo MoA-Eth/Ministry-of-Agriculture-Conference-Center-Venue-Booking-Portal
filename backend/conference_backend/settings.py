@@ -34,7 +34,9 @@ ALLOWED_HOSTS = [
     'moa-conference-portal.onrender.com', 
     '.vercel.app', 
     'localhost', 
-    '127.0.0.1'
+    '127.0.0.1',
+    '10.10.20.251',
+    'backend',  # Docker internal hostname (Nginx proxy)
 ]
 
 INSTALLED_APPS = [
@@ -148,10 +150,12 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True 
 CORS_ALLOW_CREDENTIALS = True
 
-# CRITICAL: This allows your Vercel frontend to perform POST/PATCH/DELETE actions
+# CRITICAL: This allows your frontend to perform POST/PATCH/DELETE actions
 CSRF_TRUSTED_ORIGINS = [
     "https://moa-conference-portal.onrender.com",
-    "https://*.vercel.app" # Allows all Vercel deployments
+    "https://*.vercel.app",  # Allows all Vercel deployments
+    "http://10.10.20.251",   # Docker deployment server
+    "https://10.10.20.251",
 ]
 
 # --- EMAIL CONFIGURATION ---
