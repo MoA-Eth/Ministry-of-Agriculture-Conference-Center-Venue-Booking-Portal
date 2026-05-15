@@ -1,7 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from django.urls import path
+from .views import health_check
 
+urlpatterns = [
+    path("api/health/", health_check),
+]
 router = DefaultRouter()
 router.register(r'venues', views.VenueViewSet)
 router.register(r'technical-services', views.TechnicalServiceViewSet)

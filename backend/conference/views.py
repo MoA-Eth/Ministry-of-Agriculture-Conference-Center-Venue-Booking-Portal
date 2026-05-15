@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import datetime, time
 from django.db.models import Q
-
+from django.http import JsonResponse
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -46,7 +46,8 @@ from .permissions import (
 # ---------------------------------------------------------------------------
 # Authentication Views
 # ---------------------------------------------------------------------------
-
+def health_check(request):
+    return JsonResponse({"status": "ok"})
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
