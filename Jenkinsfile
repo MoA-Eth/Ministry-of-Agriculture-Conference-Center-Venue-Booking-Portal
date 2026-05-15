@@ -164,38 +164,20 @@ EOF
         // ─────────────────────────────────────────────
         // 7. Deploy with Docker Compose on 10.10.20.251
         // ─────────────────────────────────────────────
-        stage('Deploy') {
-            steps {
-                echo '🚀 Deploying with Docker Compose on 10.10.20.251...'
-                sshagent(credentials: ["${SSH_CRED_ID}"]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
-                            cd ${APP_DIR}
-
-                            # Stop existing containers
-                            docker compose down --remove-orphans || true
-
-                            # Start all services (use pre-built images)
-                            docker compose up -d --no-build
-
-                            # Wait for backend to be ready
-                            echo "Waiting for backend to be ready..."
-                            sleep 15
-
-                            # Run Django migrations
-                            docker compose exec -T backend python manage.py migrate --no-input
-
-                            # Collect static files
-                            docker compose exec -T backend python manage.py collectstatic --no-input || true
-
-                            # Show running containers
-                            docker compose ps
-                        '
-                    """
-                }
-            }
+       stage('Deploy') {
+    steps {
+        // 'app-server-ssh-key' matches the ID you set in Jenkins credentials
+        sshagent(['app-server-ssh-key']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ubuntu@10.10.20.251 '
+                    cd /home/ubuntu/conference-system &&
+                    git pull origin main &&
+                    docker compose up -d --no-build
+                '
+            """
         }
-
+    }
+}
         // ─────────────────────────────────────────────
         // 8. Health Check
         // ─────────────────────────────────────────────
