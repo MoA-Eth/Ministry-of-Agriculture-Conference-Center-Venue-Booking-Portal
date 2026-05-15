@@ -67,12 +67,7 @@ services:
       - backend_net
       - proxy_net
     # ✅ NEW: healthcheck so Nginx waits for backend to be truly ready
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1" ]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+
     command: >
       sh -c "python manage.py migrate --no-input &&
              python manage.py collectstatic --no-input &&
