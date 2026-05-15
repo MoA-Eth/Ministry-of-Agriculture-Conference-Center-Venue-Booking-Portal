@@ -45,6 +45,10 @@ pipeline {
             steps {
                 sshagent(['deploy-server']) {
                     sh """
+                        echo "==> Syncing files to app server..."
+                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'mkdir -p ${APP_DIR}'
+                        rsync -avz --delete --exclude='.git' --exclude='**/.venv' --exclude='**/node_modules' ./ ${APP_SERVER}:${APP_DIR}/
+
                         echo "==> Transferring images to app server..."
                         docker save moa-backend:latest  | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
                         docker save moa-frontend:latest | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
@@ -52,8 +56,9 @@ pipeline {
                         echo "==> Deploying on app server..."
                         ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
                             cd ${APP_DIR}
-                            git pull origin main
                             docker compose up -d --no-build
+                            docker compose exec -T backend python manage.py migrate --no-input
+                            docker compose exec -T backend python manage.py collectstatic --no-input
                             docker image prune -f
                         '
                     """
