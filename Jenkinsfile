@@ -42,29 +42,39 @@ pipeline {
         }
 
         stage('Deploy') {
-            steps {
-                sshagent(['deploy-server']) {
-                    sh """
-                        echo "==> Syncing files to app server..."
-                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'mkdir -p ${APP_DIR}'
-                        rsync -avz --delete --exclude='.git' --exclude='**/.venv' --exclude='**/node_modules' ./ ${APP_SERVER}:${APP_DIR}/
+    steps {
+        sshagent(['deploy-server']) {
+            sh """
+                echo "==> Preparing remote directory..."
+                ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'mkdir -p ${APP_DIR}'
 
-                        echo "==> Transferring images to app server..."
-                        docker save moa-backend:latest  | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
-                        docker save moa-frontend:latest | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
+                echo "==> Copying deployment files..."
+                scp -o StrictHostKeyChecking=no docker-compose.yml ${APP_SERVER}:${APP_DIR}/
+                scp -o StrictHostKeyChecking=no -r nginx ${APP_SERVER}:${APP_DIR}/ || true
 
-                        echo "==> Deploying on app server..."
-                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
-                            cd ${APP_DIR}
-                            docker-compose up -d --no-build
-                            docker-compose exec -T backend python manage.py migrate --no-input
-                            docker-compose exec -T backend python manage.py collectstatic --no-input
-                            docker image prune -f
-                        '
-                    """
-                }
-            }
+                echo "==> Transferring images..."
+                docker save moa-backend:latest  | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
+                docker save moa-frontend:latest | ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'docker load'
+
+                echo "==> Deploying containers..."
+                ssh -o StrictHostKeyChecking=no ${APP_SERVER} "
+                    cd ${APP_DIR}
+
+                    docker-compose up -d --no-build
+
+                    sleep 10
+
+                    docker-compose exec -T backend python manage.py migrate --no-input || true
+                    docker-compose exec -T backend python manage.py collectstatic --no-input || true
+
+                    docker image prune -f
+
+                    docker-compose ps
+                "
+            """
         }
+    }
+}
 
         stage('Health Check') {
             steps {
