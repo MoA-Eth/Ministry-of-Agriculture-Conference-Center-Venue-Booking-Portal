@@ -39,7 +39,7 @@ COPY . .
 # ✅ FIXED: create media dir and set ownership BEFORE switching to appuser
 # The media volume is mounted as root at runtime — appuser needs write access
 # to save uploaded files (paper submissions, profile photos, etc.)
-RUN adduser --disabled-password --no-create-home appuser && \
+RUN adduser --disabled-password appuser && \
     mkdir -p /app/media /app/staticfiles && \
     chown -R appuser:appuser /app/media /app/staticfiles
 
