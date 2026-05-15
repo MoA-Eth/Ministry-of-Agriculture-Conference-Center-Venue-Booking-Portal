@@ -10,7 +10,7 @@ venv/
 .venv/
 env/
 .env/
-requirements.txt
+
 # Environment variables — NEVER commit real secrets
 .env
 
