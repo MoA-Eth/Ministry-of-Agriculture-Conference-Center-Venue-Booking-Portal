@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser } from './types';
 import { toast } from 'sonner';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://10.10.20.251/api';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://10.10.20.251';
 
 interface AppContextType {
   role: UserRole;
@@ -109,20 +109,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const d = typeof date === 'string' ? (date.includes('T') ? new Date(date) : new Date(`2000-01-01T${date}`)) : date;
       if (isNaN(d.getTime())) return typeof date === 'string' ? date : 'TBD';
-      
+
       const gregHour = d.getHours();
       const mins = d.getMinutes().toString().padStart(2, '0');
-      
+
       // Ethiopian 12-hour convention: 6 AM is 12:00
       let ethHour = (gregHour - 6 + 12) % 12;
       if (ethHour === 0) ethHour = 12;
-      
+
       let period = "";
       if (gregHour >= 6 && gregHour < 12) period = "Morning";
       else if (gregHour >= 12 && gregHour < 18) period = "Afternoon";
       else if (gregHour >= 18 && gregHour < 24) period = "Evening";
       else period = "Night";
-      
+
       return `${ethHour}:${mins} ${period}`;
     } catch {
       return typeof date === 'string' ? date : 'TBD';
@@ -228,7 +228,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const fetchPromises: any[] = [
           fetch(bookingsUrl, { headers }),
           fetch(`${API_BASE}/venues/`, { headers }),
-          fetch(`${API_BASE}/technical-services/`, { headers }), 
+          fetch(`${API_BASE}/technical-services/`, { headers }),
           fetch(`${API_BASE}/support-services/`, { headers }),
           ...(currentToken ? [fetch(`${API_BASE}/audit-logs/`, { headers })] : [])
         ];
@@ -247,7 +247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const bData = await responses[0].json();
         const vData = await responses[1].json();
-        const tData = await responses[2].json(); 
+        const tData = await responses[2].json();
         const sData = await responses[3].json();
         const aData = currentToken ? await responses[4].json() : [];
 
