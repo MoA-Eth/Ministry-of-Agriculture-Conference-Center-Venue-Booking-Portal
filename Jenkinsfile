@@ -10,8 +10,7 @@ pipeline {
         // -- Target deployment server --
         DEPLOY_HOST = '10.10.20.251'
         DEPLOY_USER = 'cms'
-        APP_DIR     = '/home/cms/moacms/Ministry-of-Agriculture-Conference-Center-Venue-Booking-Portal
-'   // ← change to your app path
+        APP_DIR     = '/home/cms/moacms/Ministry-of-Agriculture-Conference-Center-Venue-Booking-Portal' // ← change to your app path
 
         // -- GitHub repo --
         GITHUB_REPO = 'https://github.com/MoA-Eth/Ministry-of-Agriculture-Conference-Center-Venue-Booking-Portal.git'
