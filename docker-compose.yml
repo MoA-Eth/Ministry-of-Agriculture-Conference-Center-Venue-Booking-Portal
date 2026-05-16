@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-
   # ---------- PostgreSQL ----------
   db:
     image: postgres:16-alpine
@@ -9,76 +8,59 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${DB_NAME:-conference_db}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     networks:
       - backend_net
 
   # ---------- Backend (Django + Gunicorn) ----------
   backend:
     image: moa-backend:latest
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
     restart: unless-stopped
-
     depends_on:
-      - db # ✅ FIXED (no condition)
-
+      - db
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
-
     environment:
       SECRET_KEY: ${SECRET_KEY}
-      DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
-
-      DB_NAME: ${DB_NAME:-conference_db}
-      DB_USER: ${DB_USER:-postgres}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: db
       DB_PORT: 5432
-
-      CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-True}
-
-      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
-      EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS}
       EMAIL_HOST_USER: ${EMAIL_HOST_USER}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
-
     ports:
       - "8000:8000"
-
-    command: >
-      sh -c "python manage.py migrate --no-input &&
-             python manage.py collectstatic --no-input &&
-             gunicorn conference_backend.wsgi:application
-             --bind 0.0.0.0:8000
-             --workers 3
-             --timeout 120"
-
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py migrate --no-input &&
+        python manage.py collectstatic --no-input &&
+        gunicorn conference_backend.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -
     networks:
       - backend_net
 
-  # ---------- Frontend ----------
+  # ---------- Frontend (React + Nginx) ----------
   frontend:
     image: moa-frontend:latest
-    build:
-      context: ./system-builder
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE: ${VITE_API_BASE:-/api}
-
     restart: unless-stopped
     depends_on:
       - backend
-
     ports:
       - "80:80"
+    networks:
+      - backend_net
 
 # ---------- Networks ----------
 networks:
@@ -90,4 +72,3 @@ volumes:
   postgres_data:
   media_data:
   static_data:
-
