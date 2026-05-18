@@ -156,6 +156,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",  # Allows all Vercel deployments
     "http://10.10.20.251",   # Docker deployment server
     "https://10.10.20.251",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    
 ]
 
 # --- EMAIL CONFIGURATION ---
