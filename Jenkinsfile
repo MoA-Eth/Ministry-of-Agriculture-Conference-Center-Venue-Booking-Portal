@@ -80,7 +80,7 @@ ENVEOF
                                 echo "SECRET_KEY=\$SECRET" >> .env
                             fi
 
-                            docker-compose down --remove-orphans || true
+                            docker-compose down --remove-orphans  true
                             docker-compose up -d --no-build
 
                             echo "Waiting for database..."
@@ -95,11 +95,32 @@ ENVEOF
                             echo "Testing backend internally..."
                             docker-compose exec -T backend curl -sf http://localhost:8000/api/health/ \
                                 && echo "✅ Backend internal check passed" \
-                                || echo "⚠️  Health endpoint not available yet"
+                                 echo "⚠️  Health endpoint not available yet"
 
                             docker system prune -f
                             docker exec backend python manage.py migrate --noinput
                             docker exec backend python manage.py loaddata seed_data
+                        '
+                    """
+                }
+            }
+        }
+
+       
+        stage('Run Migrations & Seed') {
+            steps {
+                sshagent(['deploy-server']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+                            cd ${APP_DIR}
+
+
+
+                            echo "==> Running Django migrations..."
+                            docker-compose exec -T backend python manage.py migrate
+
+                            echo "==> Running seed data..."
+                            docker-compose exec -T backend python manage.py shell < seed_data.py
                         '
                     """
                 }
@@ -114,7 +135,6 @@ ENVEOF
                     def backendHealthy  = false
                     def frontendHealthy = false
 
-                    // ✅ Check through nginx (port 80) to avoid firewall issues on 8000
                     for (int i = 1; i <= 5; i++) {
                         def httpCode = sh(
                             script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/api/health/",
@@ -163,17 +183,15 @@ ENVEOF
         }
         failure {
             echo '❌ Deployment failed'
-            // ✅ Double quotes so ${APP_SERVER} and ${APP_DIR} expand correctly
-            // ✅ Wrapped in sshagent so credentials are available
             sshagent(['deploy-server']) {
                 sh """
                     echo "Fetching diagnostic information..."
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "cd ${APP_DIR} && docker-compose logs --tail=100" \
-                        || echo "Could not fetch logs"
+                         echo "Could not fetch logs"
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "cd ${APP_DIR} && docker-compose ps" \
-                        || echo "Could not check status"
+                         echo "Could not check status"
                 """
             }
         }
