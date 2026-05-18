@@ -98,15 +98,13 @@ ENVEOF
                                 || echo "⚠️  Health endpoint not available yet"
 
                             docker system prune -f
-                            docker exec backend python manage.py migrate --noinput
-                            docker exec backend python manage.py loaddata seed_data
                         '
                     """
                 }
             }
         }
 
-       
+        // ✅ NEW STAGE
         stage('Run Migrations & Seed') {
             steps {
                 sshagent(['deploy-server']) {
