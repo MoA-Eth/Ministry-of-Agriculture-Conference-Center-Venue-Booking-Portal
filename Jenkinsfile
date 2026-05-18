@@ -99,7 +99,7 @@ ENVEOF
 
                             docker system prune -f
                             docker exec backend python manage.py migrate --noinput
-                            docker exec backend python manage.py loaddata seed_data --noinput
+                            docker exec backend python manage.py loaddata seed_data
                         '
                     """
                 }
