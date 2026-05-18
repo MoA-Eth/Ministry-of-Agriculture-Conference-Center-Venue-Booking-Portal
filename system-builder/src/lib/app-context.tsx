@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser } from './types';
 import { toast } from 'sonner';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://10.10.20.251/api';
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://10.10.20.251';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http:///localhost:8000/api';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http:///localhost:8000';
 
 interface AppContextType {
   role: UserRole;
