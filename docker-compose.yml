@@ -1,3 +1,4 @@
+version: "3.8"
 
 services:
   # ---------- PostgreSQL ----------
@@ -71,46 +72,3 @@ volumes:
   postgres_data:
   media_data:
   static_data:
-=======
-backend:
-  image: moa-backend:latest
-  restart: unless-stopped
-  depends_on:
-    - db
-  volumes:
-    - media_data:/app/media
-    - static_data:/app/staticfiles
-  environment:
-    SECRET_KEY: ${SECRET_KEY}
-    DEBUG: ${DEBUG:-False}
-    ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
-    DB_NAME: ${DB_NAME:-conference_db}
-    DB_USER: ${DB_USER:-postgres}
-    DB_PASSWORD: ${DB_PASSWORD}
-    DB_HOST: db
-    DB_PORT: 5432
-    CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-True}
-    EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
-    EMAIL_PORT: ${EMAIL_PORT:-587}
-    EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
-    EMAIL_HOST_USER: ${EMAIL_HOST_USER}
-    EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
-    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
-  ports:
-    - "8000:8000"
-  # ✅ Use list format — no shell interpretation issues
-  command:
-    - sh
-    - -c
-    - |
-      python manage.py migrate --no-input &&
-      python manage.py collectstatic --no-input &&
-      gunicorn conference_backend.wsgi:application \
-        --bind 0.0.0.0:8000 \
-        --workers 3 \
-        --timeout 120 \
-        --access-logfile - \
-        --error-logfile -
-  networks:
-    - backend_net
-
