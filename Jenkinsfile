@@ -116,7 +116,7 @@ ENVEOF
                             docker-compose exec -T backend python manage.py migrate
 
                             echo "==> Running seed data..."
-                            docker-compose exec -T backend python manage.py shell < seed_data.py
+                           docker-compose exec -T backend python seed_data.py
                         '
                     """
                 }
