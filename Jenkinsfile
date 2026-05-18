@@ -104,6 +104,25 @@ ENVEOF
             }
         }
 
+       
+        stage('Run Migrations & Seed') {
+            steps {
+                sshagent(['deploy-server']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} '
+                            cd ${APP_DIR}
+
+                            echo "==> Running Django migrations..."
+                            docker-compose exec -T backend python manage.py migrate
+
+                            echo "==> Running seed data..."
+                            docker-compose exec -T backend python manage.py shell < seed_data.py
+                        '
+                    """
+                }
+            }
+        }
+
         stage('Health Check') {
             steps {
                 script {
@@ -112,7 +131,6 @@ ENVEOF
                     def backendHealthy  = false
                     def frontendHealthy = false
 
-                    // ✅ Check through nginx (port 80) to avoid firewall issues on 8000
                     for (int i = 1; i <= 5; i++) {
                         def httpCode = sh(
                             script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/api/health/",
@@ -161,8 +179,6 @@ ENVEOF
         }
         failure {
             echo '❌ Deployment failed'
-            // ✅ Double quotes so ${APP_SERVER} and ${APP_DIR} expand correctly
-            // ✅ Wrapped in sshagent so credentials are available
             sshagent(['deploy-server']) {
                 sh """
                     echo "Fetching diagnostic information..."
