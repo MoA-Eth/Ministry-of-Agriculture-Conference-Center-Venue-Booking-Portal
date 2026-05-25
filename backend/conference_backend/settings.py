@@ -36,9 +36,8 @@ ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1',
     '10.10.20.251',
-    'backend', 
-    'http://cms.moa.gov.et/', # Docker internal hostname (Nginx proxy)
-    'https://cms.moa.gov.et/' # Docker internal hostname (Nginx proxy)
+    '196.191.93.41',
+    'backend',  # Docker internal hostname (Nginx proxy)
 ]
 
 INSTALLED_APPS = [
@@ -158,10 +157,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.vercel.app",  # Allows all Vercel deployments
     "http://10.10.20.251",   # Docker deployment server
     "https://10.10.20.251",
+    "http://196.191.93.41",
+    "https://196.191.93.41",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://cms.moa.gov.et/",
-    "http://cms.moa.gov.et/"
     
 ]
 

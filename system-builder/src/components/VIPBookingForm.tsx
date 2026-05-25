@@ -162,6 +162,8 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     if (step === 1) {
       if (!form.organizerName.trim()) errs.organizerName = 'Name is required';
       if (!form.eventTitle.trim()) errs.eventTitle = 'Event Title is required';
+      if (!form.organizerEmail.trim()) errs.organizerEmail = 'Email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) errs.organizerEmail = 'Invalid email';
     } else if (step === 2) {
       if (!form.venueId) errs.venueId = 'Please select a venue';
       
@@ -352,7 +354,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
             <div className="grid sm:grid-cols-2 gap-6">
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Name *</label><input value={form.organizerName} onChange={e => setForm(p => ({ ...p, organizerName: e.target.value }))} className={inputClass('organizerName')} />{errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}</div>
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization / Ministry</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} /></div>
-              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Email</label><input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} /></div>
+              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Email *</label><input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} />{errors.organizerEmail && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerEmail}</p>}</div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Phone *</label>
                 <div className="flex items-stretch">
