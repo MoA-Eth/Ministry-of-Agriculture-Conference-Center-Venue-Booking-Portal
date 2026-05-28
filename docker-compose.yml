@@ -72,11 +72,13 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "80:80"
+        - "80:80"
       - "443:443"
     volumes:
       - /etc/ssl/cms.moa.gov.et:/etc/ssl/cms.moa.gov.et:ro        # ← SSL certs
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro       # ← nginx config
+      - media_data:/app/media:ro
+      - static_data:/app/staticfiles:ro
     networks:
       - backend_net
     healthcheck:
