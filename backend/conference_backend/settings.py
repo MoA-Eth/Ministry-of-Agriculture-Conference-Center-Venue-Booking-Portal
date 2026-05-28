@@ -30,15 +30,15 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Add your Vercel URL here too just in case
-ALLOWED_HOSTS = [
-    'moa-conference-portal.onrender.com', 
-    '.vercel.app', 
-    'localhost', 
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv()) + [
+    'moa-conference-portal.onrender.com',
+    '.vercel.app',
+    'localhost',
     '127.0.0.1',
     '10.10.20.251',
-    'backend', 
-    'http://cms.moa.gov.et/', # Docker internal hostname (Nginx proxy)
-    'https://cms.moa.gov.et/' # Docker internal hostname (Nginx proxy)
+    'backend',
+    'cms.moa.gov.et',
+    '196.191.93.41',
 ]
 
 INSTALLED_APPS = [
@@ -155,14 +155,13 @@ CORS_ALLOW_CREDENTIALS = True
 # CRITICAL: This allows your frontend to perform POST/PATCH/DELETE actions
 CSRF_TRUSTED_ORIGINS = [
     "https://moa-conference-portal.onrender.com",
-    "https://*.vercel.app",  # Allows all Vercel deployments
-    "http://10.10.20.251",   # Docker deployment server
+    "https://*.vercel.app",
+    "http://10.10.20.251",
     "https://10.10.20.251",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://cms.moa.gov.et/",
-    "http://cms.moa.gov.et/"
-    
+    "https://cms.moa.gov.et",    
+    "http://cms.moa.gov.et",     
 ]
 
 # --- EMAIL CONFIGURATION ---
