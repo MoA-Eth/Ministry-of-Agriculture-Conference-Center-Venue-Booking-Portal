@@ -9,6 +9,8 @@ from django.utils import timezone
 from datetime import datetime, time
 from django.db.models import Q
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -74,7 +76,7 @@ class RegisterView(APIView):
             }
         }, status=status.HTTP_201_CREATED)
 
-
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -112,7 +114,6 @@ class LoginView(APIView):
             }
 
         return Response({'token': token.key, 'user': user_data})
-
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
