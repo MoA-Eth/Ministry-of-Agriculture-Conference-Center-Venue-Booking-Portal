@@ -36,7 +36,8 @@ ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1',
     '10.10.20.251',
-    'backend',  # Docker internal hostname (Nginx proxy)
+    'backend', 
+    'https://cms.moa.gov.et/' # Docker internal hostname (Nginx proxy)
 ]
 
 INSTALLED_APPS = [
@@ -158,6 +159,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://10.10.20.251",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://cms.moa.gov.et/",
     
 ]
 

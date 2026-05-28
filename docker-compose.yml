@@ -59,6 +59,10 @@ services:
       - backend
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/ssl/cms.moa.gov.et:/etc/ssl/cms.moa.gov.et:ro        # ← SSL certs
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro       # ← nginx config
     networks:
       - backend_net
 
