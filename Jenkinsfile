@@ -133,7 +133,7 @@ ENVEOF
 
                     for (int i = 1; i <= 5; i++) {
                         def httpCode = sh(
-                            script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/api/health/",
+                            script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251:8000/api/health/",
                             returnStdout: true
                         ).trim()
                         echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
@@ -145,7 +145,7 @@ ENVEOF
                     }
 
                     def frontendCode = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/",
+                        script: "curl -sk -o /dev/null -w '%{http_code}' https://10.10.20.251/",
                         returnStdout: true
                     ).trim()
                     echo "Frontend health check — HTTP ${frontendCode}"
