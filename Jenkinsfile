@@ -48,11 +48,10 @@ pipeline {
                 sshagent(['deploy-server']) {
                     sh """
                         echo "==> Preparing remote directory..."
-                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'mkdir -p ${APP_DIR}/nginx'
+                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'mkdir -p ${APP_DIR}'
 
                         echo "==> Copying deployment files..."
                         scp -o StrictHostKeyChecking=no docker-compose.yml ${APP_SERVER}:${APP_DIR}/
-                        scp -o StrictHostKeyChecking=no nginx/nginx.conf ${APP_SERVER}:${APP_DIR}/nginx/nginx.conf
 
                         if [ -f .env ]; then
                             scp -o StrictHostKeyChecking=no .env ${APP_SERVER}:${APP_DIR}/
@@ -73,19 +72,10 @@ pipeline {
                                 SECRET=\$(openssl rand -base64 50)
                                 cat > .env << ENVEOF
 DEBUG=False
-DB_NAME=conference_db
-DB_USER=cms_user
 DB_PASSWORD=StrongP@ssw0rd123
-ALLOWED_HOSTS=cms.moa.gov.et,196.191.93.41
-CORS_ALLOW_ALL_ORIGINS=False
-VITE_API_BASE=https://cms.moa.gov.et/api
-VITE_SERVER_URL=https://cms.moa.gov.et
-EMAIL_HOST=
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
-DEFAULT_FROM_EMAIL=
+VITE_API_BASE=https://cms.moa.gov.et/api
 ENVEOF
                                 echo "SECRET_KEY=\$SECRET" >> .env
                             fi
@@ -114,6 +104,7 @@ ENVEOF
             }
         }
 
+        // ✅ NEW STAGE
         stage('Run Migrations & Seed') {
             steps {
                 sshagent(['deploy-server']) {
@@ -134,42 +125,40 @@ ENVEOF
 
         stage('Health Check') {
             steps {
-                sshagent(['cms']) {
-                    script {
-                        sleep time: 15, unit: 'SECONDS'
+                script {
+                    sleep time: 15, unit: 'SECONDS'
 
-                        def backendHealthy  = false
-                        def frontendHealthy = false
+                    def backendHealthy  = false
+                    def frontendHealthy = false
 
-                        for (int i = 1; i <= 5; i++) {
-                            def httpCode = sh(
-                                script: "ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'curl -sk -o /dev/null -w \"%{http_code}\" https://localhost/api/health/'",
-                                returnStdout: true
-                            ).trim()
-                            echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
-                            if (httpCode == '200') {
-                                backendHealthy = true
-                                break
-                            }
-                            if (i < 5) sleep time: 10, unit: 'SECONDS'
-                        }
-
-                        def frontendCode = sh(
-                            script: "ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'curl -sk -o /dev/null -w \"%{http_code}\" https://localhost/'",
+                    for (int i = 1; i <= 5; i++) {
+                        def httpCode = sh(
+                            script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/api/health/",
                             returnStdout: true
                         ).trim()
-                        echo "Frontend health check — HTTP ${frontendCode}"
-                        frontendHealthy = (frontendCode == '200')
-
-                        if (!backendHealthy) {
-                            error "❌ Backend health check failed after 5 attempts"
+                        echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
+                        if (httpCode == '200') {
+                            backendHealthy = true
+                            break
                         }
-                        if (!frontendHealthy) {
-                            echo "⚠️  Warning: Frontend not returning 200 (got ${frontendCode})"
-                        }
-
-                        echo "✅ Deployment verified"
+                        if (i < 5) sleep time: 10, unit: 'SECONDS'
                     }
+
+                    def frontendCode = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/",
+                        returnStdout: true
+                    ).trim()
+                    echo "Frontend health check — HTTP ${frontendCode}"
+                    frontendHealthy = (frontendCode == '200')
+
+                    if (!backendHealthy) {
+                        error "❌ Backend health check failed after 5 attempts"
+                    }
+                    if (!frontendHealthy) {
+                        echo "⚠️  Warning: Frontend not returning 200 (got ${frontendCode})"
+                    }
+
+                    echo "✅ Deployment verified"
                 }
             }
         }
@@ -182,9 +171,9 @@ ENVEOF
                 echo "==================================="
                 echo "🎉 DEPLOYMENT COMPLETE 🎉"
                 echo "==================================="
-                echo "Frontend:    https://cms.moa.gov.et"
-                echo "Backend API: https://cms.moa.gov.et/api/"
-                echo "Admin:       https://cms.moa.gov.et/admin/"
+                echo "Frontend:    http://10.10.20.251"
+                echo "Backend API: http://10.10.20.251/api/"
+                echo "Admin:       http://10.10.20.251/admin/"
                 echo "==================================="
             '''
         }
