@@ -134,40 +134,42 @@ ENVEOF
 
         stage('Health Check') {
             steps {
-                script {
-                    sleep time: 15, unit: 'SECONDS'
+                sshagent(['cms']) {
+                    script {
+                        sleep time: 15, unit: 'SECONDS'
 
-                    def backendHealthy  = false
-                    def frontendHealthy = false
+                        def backendHealthy  = false
+                        def frontendHealthy = false
 
-                    for (int i = 1; i <= 5; i++) {
-                        def httpCode = sh(
-                            script: "curl -sk -o /dev/null -w '%{http_code}' https://cms.moa.gov.et/api/health/",
+                        for (int i = 1; i <= 5; i++) {
+                            def httpCode = sh(
+                                script: "ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'curl -sk -o /dev/null -w \"%{http_code}\" https://localhost/api/health/'",
+                                returnStdout: true
+                            ).trim()
+                            echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
+                            if (httpCode == '200') {
+                                backendHealthy = true
+                                break
+                            }
+                            if (i < 5) sleep time: 10, unit: 'SECONDS'
+                        }
+
+                        def frontendCode = sh(
+                            script: "ssh -o StrictHostKeyChecking=no ${APP_SERVER} 'curl -sk -o /dev/null -w \"%{http_code}\" https://localhost/'",
                             returnStdout: true
                         ).trim()
-                        echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
-                        if (httpCode == '200') {
-                            backendHealthy = true
-                            break
+                        echo "Frontend health check — HTTP ${frontendCode}"
+                        frontendHealthy = (frontendCode == '200')
+
+                        if (!backendHealthy) {
+                            error "❌ Backend health check failed after 5 attempts"
                         }
-                        if (i < 5) sleep time: 10, unit: 'SECONDS'
-                    }
+                        if (!frontendHealthy) {
+                            echo "⚠️  Warning: Frontend not returning 200 (got ${frontendCode})"
+                        }
 
-                    def frontendCode = sh(
-                        script: "curl -sk -o /dev/null -w '%{http_code}' https://cms.moa.gov.et/",
-                        returnStdout: true
-                    ).trim()
-                    echo "Frontend health check — HTTP ${frontendCode}"
-                    frontendHealthy = (frontendCode == '200')
-
-                    if (!backendHealthy) {
-                        error "❌ Backend health check failed after 5 attempts"
+                        echo "✅ Deployment verified"
                     }
-                    if (!frontendHealthy) {
-                        echo "⚠️  Warning: Frontend not returning 200 (got ${frontendCode})"
-                    }
-
-                    echo "✅ Deployment verified"
                 }
             }
         }
