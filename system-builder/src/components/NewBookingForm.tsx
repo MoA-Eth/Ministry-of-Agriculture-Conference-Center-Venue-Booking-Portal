@@ -201,6 +201,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       if (!form.organizerName?.trim()) errs.organizerName = 'Required';
       if (!form.eventTitle?.trim()) errs.eventTitle = 'Required';
       if (!form.organizerPhone?.trim() || form.organizerPhone.trim() === '+251') errs.organizerPhone = 'Required';
+      if (!form.organizerEmail?.trim()) errs.organizerEmail = 'Required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) errs.organizerEmail = 'Invalid email';
     } else if (step === 2) {
       if (!form.venueId) errs.venueId = 'Select a venue';
       
@@ -359,6 +361,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 <div>
                   <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Official Email *</label>
                   <input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} placeholder="name@domain.com" />
+                  {errors.organizerEmail && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerEmail}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Phone Number *</label>

@@ -824,7 +824,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-none">MoA Conference Center</h3>
               </div>
-              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed font-medium">Providing world-class infrastructure for the Ministry of Agriculture of Ethiopia. Digital transformation powered by UNOPS.</p>
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed font-medium">Providing world-class infrastructure for the Ministry of Agriculture of Ethiopia.</p>
             </div>
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
