@@ -75,12 +75,12 @@ DEBUG=False
 DB_PASSWORD=StrongP@ssw0rd123
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
-VITE_API_BASE=http://10.10.20.251/api
+VITE_API_BASE=https://cms.moa.gov.et/api
 ENVEOF
                                 echo "SECRET_KEY=\$SECRET" >> .env
                             fi
 
-                            docker-compose down --remove-orphans  true
+                            docker-compose down --remove-orphans || true
                             docker-compose up -d --no-build
 
                             echo "Waiting for database..."
@@ -95,7 +95,7 @@ ENVEOF
                             echo "Testing backend internally..."
                             docker-compose exec -T backend curl -sf http://localhost:8000/api/health/ \
                                 && echo "✅ Backend internal check passed" \
-                                 echo "⚠️  Health endpoint not available yet"
+                                || echo "⚠️  Health endpoint not available yet"
 
                             docker system prune -f
                         '
@@ -104,7 +104,7 @@ ENVEOF
             }
         }
 
-       
+        // ✅ NEW STAGE
         stage('Run Migrations & Seed') {
             steps {
                 sshagent(['deploy-server']) {
@@ -113,10 +113,10 @@ ENVEOF
                             cd ${APP_DIR}
 
                             echo "==> Running Django migrations..."
-                            docker-compose exec -T backend python manage.py migrate --no-input
+                            docker-compose exec -T backend python manage.py migrate
 
                             echo "==> Running seed data..."
-                            docker-compose exec -T backend python manage.py seed_data
+                            # docker-compose exec -T backend python manage.py seed_data
                         '
                     """
                 }
@@ -133,7 +133,7 @@ ENVEOF
 
                     for (int i = 1; i <= 5; i++) {
                         def httpCode = sh(
-                            script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/api/health/",
+                            script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251:8000/api/health/",
                             returnStdout: true
                         ).trim()
                         echo "Backend health check attempt ${i}/5 — HTTP ${httpCode}"
@@ -145,7 +145,7 @@ ENVEOF
                     }
 
                     def frontendCode = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' http://10.10.20.251/",
+                        script: "curl -sk -o /dev/null -w '%{http_code}' https://10.10.20.251/",
                         returnStdout: true
                     ).trim()
                     echo "Frontend health check — HTTP ${frontendCode}"
@@ -184,10 +184,10 @@ ENVEOF
                     echo "Fetching diagnostic information..."
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "cd ${APP_DIR} && docker-compose logs --tail=100" \
-                         echo "Could not fetch logs"
+                        || echo "Could not fetch logs"
                     ssh -o StrictHostKeyChecking=no ${APP_SERVER} \
                         "cd ${APP_DIR} && docker-compose ps" \
-                         echo "Could not check status"
+                        || echo "Could not check status"
                 """
             }
         }
