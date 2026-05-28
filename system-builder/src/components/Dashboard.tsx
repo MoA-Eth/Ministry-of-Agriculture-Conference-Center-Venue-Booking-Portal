@@ -261,15 +261,25 @@ export default function Dashboard() {
     });
   }, [rawBookings, dashDateFrom, dashDateTo, selectedVenue, selectedStatus]);
 
-  // ─── CORE METRICS ──────────────────────────────────────────
-  const confirmedCount = bookings.filter(b => ['paid', 'confirmed', 'completed'].includes(b.status)).length;
-  const pendingCount  = bookings.filter(b => b.status === 'reserved').length;
-  const completedCount = bookings.filter(b => b.status === 'completed').length;
-  const rejectedCount = bookings.filter(b => b.status === 'rejected' || b.status === 'cancelled').length;
-  const activeBookings = bookings.filter(b => ['paid', 'partial_paid', 'confirmed', 'reserved'].includes(b.status));
-  const totalParticipants = bookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+  // ─── EXCLUDED STATUSES (deleted / cancelled events) ────────
+  // Bookings with these statuses are hidden from headline metrics
+  const EXCLUDED_STATUSES = ['cancelled', 'rejected'];
 
-  const approvedCountForRate = bookings.filter(b => ['approved', 'confirmed', 'completed', 'override'].includes(b.status)).length;
+  // Active bookings = everything that is NOT cancelled or rejected
+  const activeOnlyBookings = bookings.filter(b => !EXCLUDED_STATUSES.includes(b.status));
+
+  // ─── CORE METRICS ──────────────────────────────────────────
+  const confirmedCount = activeOnlyBookings.filter(b => ['paid', 'confirmed', 'completed'].includes(b.status)).length;
+  const pendingCount  = activeOnlyBookings.filter(b => b.status === 'reserved').length;
+  const completedCount = activeOnlyBookings.filter(b => b.status === 'completed').length;
+  const rejectedCount = bookings.filter(b => EXCLUDED_STATUSES.includes(b.status)).length;
+  const activeBookings = activeOnlyBookings.filter(b => ['paid', 'partial_paid', 'confirmed', 'reserved'].includes(b.status));
+
+  // Total Bookings and Total Participants exclude cancelled / rejected events
+  const totalBookingsCount = activeOnlyBookings.length;
+  const totalParticipants = activeOnlyBookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+
+  const approvedCountForRate = activeOnlyBookings.filter(b => ['approved', 'confirmed', 'completed', 'override'].includes(b.status)).length;
   const approvalRate = (approvedCountForRate + rejectedCount) > 0 
     ? Math.round((approvedCountForRate / (approvedCountForRate + rejectedCount)) * 100) 
     : 0;
@@ -297,11 +307,12 @@ export default function Dashboard() {
     return Math.max(0, (b.totalPrice || 0) - deduction);
   };
 
-  const confirmedRevenue = bookings
+  // Revenue only from active (non-cancelled, non-rejected) bookings
+  const confirmedRevenue = activeOnlyBookings
     .filter(b => ['paid', 'confirmed', 'completed', 'approved'].includes(b.status))
     .reduce((sum, b) => sum + calculateAdjustedPrice(b), 0);
     
-  const pendingRevenue = bookings
+  const pendingRevenue = activeOnlyBookings
     .filter(b => ['reserved', 'partial_paid', 'pending'].includes(b.status))
     .reduce((sum, b) => sum + calculateAdjustedPrice(b), 0);
     
@@ -337,9 +348,10 @@ export default function Dashboard() {
   }, [activeBookings]);
 
   // ─── 4. BOOKING STATUS DISTRIBUTION ────────────────────────
+  // Only show active statuses in the pie chart — cancelled/rejected events are excluded
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    bookings.forEach(b => {
+    activeOnlyBookings.forEach(b => {
       counts[b.status] = (counts[b.status] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({
@@ -347,7 +359,7 @@ export default function Dashboard() {
       value,
       color: STATUS_COLORS[name] || '#94a3b8'
     }));
-  }, [bookings]);
+  }, [activeOnlyBookings]);
 
   // ─── 5. WEEKLY BOOKING STATUS (Daily Breakdown) ───────────
   const weeklyStatusData = useMemo(() => {
@@ -521,10 +533,11 @@ export default function Dashboard() {
   };
 
   // ─── TOP-LEVEL STAT CARDS ──────────────────────────────────
+  // NOTE: cancelled and rejected events are excluded from all headline stats
   const stats = [
-    { label: 'Total Bookings', value: bookings.length, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: 'In selected period' },
+    { label: 'Total Bookings', value: totalBookingsCount, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: 'Active events only' },
     { label: 'Approval Rate', value: `${approvalRate}%`, icon: <Target className="w-6 h-6 text-amber-400" />, bg: 'bg-[#1e1b10]', border: 'border-amber-500/20', sub: 'Approved vs Cancelled' },
-    { label: 'Total Participants', value: totalParticipants.toLocaleString(), icon: <Users className="w-6 h-6 text-blue-400" />, bg: 'bg-[#0f172a]', border: 'border-blue-500/20', sub: 'Estimated footprint' },
+    { label: 'Total Participants', value: totalParticipants.toLocaleString(), icon: <Users className="w-6 h-6 text-blue-400" />, bg: 'bg-[#0f172a]', border: 'border-blue-500/20', sub: 'Active events only' },
     ...(isAdmin ? [{ label: 'Confirmed Revenue', value: `ETB ${(confirmedRevenue / 1000).toFixed(1)}k`, icon: <Banknote className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#0d2818]', border: 'border-emerald-500/20', sub: 'From approved bookings' }] : []),
   ];
 
@@ -774,7 +787,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight font-serif">Status Overview</h3>
-              <p className="text-xs text-slate-500 font-medium">{bookings.length} total bookings</p>
+              <p className="text-xs text-slate-500 font-medium">{totalBookingsCount} active bookings</p>
             </div>
           </div>
           <div className="h-[200px]">
