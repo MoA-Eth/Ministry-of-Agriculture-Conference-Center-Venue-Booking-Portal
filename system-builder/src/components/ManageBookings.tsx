@@ -280,10 +280,10 @@ export default function ManageBookings() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-          <Activity className="w-8 h-8 text-[#268053]" /> Manage Bookings
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-[#268053]" /> Manage Bookings
         </h1>
-        <p className="text-muted-foreground mt-2">Verify payments on pending requests, apply VIP overrides, or search history.</p>
+        <p className="text-muted-foreground mt-2 text-sm sm:text-base">Verify payments on pending requests, apply VIP overrides, or search history.</p>
       </div>
 
       {/* NEW Filter & Search Bar Layout */}
@@ -489,70 +489,70 @@ export default function ManageBookings() {
             <div key={safeId} className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-lg border-[#268053]/50 ring-2 ring-[#268053]/20 my-6' : 'shadow-sm hover:shadow-md'}`}>
 
               {/* TOP HEADER */}
-              <div className={`p-5 sm:p-6 cursor-pointer group ${isExpanded ? 'bg-slate-50/50' : ''}`} onClick={() => !isRejecting && setExpandedId(isExpanded ? null : safeId)}>
-                <div className="flex flex-col lg:flex-row gap-5 lg:items-center justify-between">
+              <div className={`p-4 sm:p-5 cursor-pointer group ${isExpanded ? 'bg-slate-50/50' : ''}`} onClick={() => !isRejecting && setExpandedId(isExpanded ? null : safeId)}>
+                <div className="flex flex-col gap-3">
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-3 mb-2.5">
-                      {isVipBooking && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
-                          <Crown size={12} /> VIP REQUEST
-                        </span>
-                      )}
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${style.bg} ${style.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${style.dot} animate-pulse`}></span> {style.label}
-                        {hasAnyConflict && (
-                          <>
-                            <span className="w-1 h-3 border-l border-current/20 ml-1"></span>
-                            <span className="text-red-600 font-black ml-1 uppercase tracking-tighter">Unavailable Resources</span>
-                          </>
-                        )}
+                  {/* Title + status row */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isVipBooking && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+                        <Crown size={12} /> VIP REQUEST
                       </span>
-                      <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-[#268053] transition-colors">{title}</h3>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600 font-medium">
-                      <div className="flex items-center gap-1.5 shrink-0"><MapPin className="w-4 h-4 text-slate-400" /><span>{venueName}</span></div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span>
-                          {startDate === endDate
-                            ? toEthDateString(startDate)
-                            : `From ${toEthDateString(startDate).split(',')[0]} to ${toEthDateString(endDate)}`}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="font-bold text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
-                          {startTime} - {endTime} Local
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0"><User className="w-4 h-4 text-slate-400" /><span>{orgName}</span></div>
-                    </div>
+                    )}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${style.bg} ${style.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} animate-pulse`}></span> {style.label}
+                      {hasAnyConflict && (
+                        <>
+                          <span className="w-1 h-3 border-l border-current/20 ml-1"></span>
+                          <span className="text-red-600 font-black ml-1 uppercase tracking-tighter">Unavailable Resources</span>
+                        </>
+                      )}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate group-hover:text-[#268053] transition-colors flex-1 min-w-0">{title}</h3>
                   </div>
 
-                  <div className="flex items-center gap-2 justify-end">
-                    
+                  {/* Meta info */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:text-sm text-slate-600 font-medium">
+                    <div className="flex items-center gap-1.5 shrink-0"><MapPin className="w-3.5 h-3.5 text-slate-400" /><span>{venueName}</span></div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>
+                        {startDate === endDate
+                          ? toEthDateString(startDate)
+                          : `${toEthDateString(startDate).split(',')[0]} – ${toEthDateString(endDate)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-bold text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
+                        {startTime} - {endTime} Local
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0"><User className="w-3.5 h-3.5 text-slate-400" /><span>{orgName}</span></div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap items-center gap-2" onClick={e => e.stopPropagation()}>
                     {/* Normal Users Payment Flow */}
                     {statusLower === 'pending' && !isRejecting && !isVipBooking && (
                       <>
                         <Button 
                           disabled={pendingActionId !== null}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm min-w-[140px]" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
                           onClick={(e) => handleStatusChange(safeId, 'partial_paid', e)}
                         >
-                          {pendingActionId === `${safeId}-partial_paid` ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : null}
+                          {pendingActionId === `${safeId}-partial_paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
                           {pendingActionId === `${safeId}-partial_paid` ? 'Processing...' : 'Confirm 1st Round'}
                         </Button>
                         <Button 
                           disabled={pendingActionId !== null}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm min-w-[140px]" 
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
                           onClick={(e) => handleStatusChange(safeId, 'paid', e)}
                         >
-                          {pendingActionId === `${safeId}-paid` ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : null}
+                          {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
                           {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
                         </Button>
                       </>
@@ -561,47 +561,47 @@ export default function ManageBookings() {
                     {statusLower === 'partial_paid' && !isRejecting && (
                       <Button 
                         disabled={pendingActionId !== null}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm min-w-[140px]" 
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
                         onClick={(e) => handleStatusChange(safeId, 'paid', e)}
                       >
-                        {pendingActionId === `${safeId}-paid` ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : null}
+                        {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
                         {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
                       </Button>
                     )}
 
                     {/* VIP Users Approval Flow */}
                     {statusLower === 'pending' && !isRejecting && isVipBooking && (
-                      <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-sm" onClick={(e) => handleStatusChange(safeId, 'approved', e)}>
-                        <Star className="w-4 h-4 mr-2" /> Approve VIP
+                      <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10" onClick={(e) => handleStatusChange(safeId, 'approved', e)}>
+                        <Star className="w-3.5 h-3.5 mr-1.5" /> Approve VIP
                       </Button>
                     )}
 
-                    {/* Both can be rejected from pending or partial */}
+                    {/* Reject button */}
                     {['pending', 'partial_paid'].includes(statusLower) && !isRejecting && (
-                      <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm" onClick={(e) => handleInitReject(safeId, e)}>
+                      <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
                         <XCircle className="w-4 h-4" />
                       </Button>
                     )}
 
                     {/* Completion from paid or VIP approved */}
                     {['paid', 'approved'].includes(statusLower) && (
-                      <Button variant="outline" className="text-slate-700 border-slate-300 font-bold shadow-sm" onClick={(e) => handleStatusChange(safeId, 'completed', e)}>
+                      <Button variant="outline" className="text-slate-700 border-slate-300 font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3" onClick={(e) => handleStatusChange(safeId, 'completed', e)}>
                         Mark Completed
                       </Button>
                     )}
 
-                    <ChevronDown className={`w-5 h-5 text-slate-400 ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-5 h-5 text-slate-400 ml-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
               </div>
 
               {/* EXPANDED RICH DETAILS AREA */}
               {isExpanded && (
-                <div className="border-t-2 border-slate-100 bg-white p-8 cursor-default animate-in fade-in slide-in-from-top-4 duration-300" onClick={(e) => e.stopPropagation()}>
+                <div className="border-t-2 border-slate-100 bg-white p-4 sm:p-8 cursor-default animate-in fade-in slide-in-from-top-4 duration-300" onClick={(e) => e.stopPropagation()}>
 
                   {isRejecting && (
-                    <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-                      <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2"><XCircle className="w-5 h-5" /> Reason for Cancellation/Rejection</h4>
+                    <div className="mb-6 sm:mb-8 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                      <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2 text-sm"><XCircle className="w-4 h-4" /> Reason for Cancellation/Rejection</h4>
                       <textarea autoFocus value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="w-full text-sm border border-red-200 rounded-lg p-4 shadow-inner resize-none focus:outline-none focus:ring-2 focus:ring-red-500" rows={3} placeholder="Please provide the exact reason why this is rejected. The user will see this." />
                       <div className="flex justify-end gap-3 mt-4">
                         <Button variant="ghost" onClick={(e) => { e.stopPropagation(); setRejectingId(null); }}>Cancel</Button>
@@ -610,7 +610,7 @@ export default function ManageBookings() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
 
                     {/* COLUMN 1: Organizer Details */}
                     <div className="space-y-6">
@@ -765,7 +765,7 @@ export default function ManageBookings() {
         })}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-slate-200 mt-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 sm:px-6 py-4 rounded-xl border border-slate-200 mt-6 shadow-sm">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
               Showing <span className="text-slate-900">{Math.min(finalFilteredBookings.length, (currentPage - 1) * itemsPerPage + 1)}-{Math.min(finalFilteredBookings.length, currentPage * itemsPerPage)}</span> of {finalFilteredBookings.length}
             </p>

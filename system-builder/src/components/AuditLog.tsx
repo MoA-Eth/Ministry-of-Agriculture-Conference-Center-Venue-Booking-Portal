@@ -250,24 +250,24 @@ export default function AuditLog() {
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         <div className="absolute -right-10 -top-10 w-64 h-64 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
-              <History className="w-7 h-7 text-emerald-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
+              <History className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-serif font-extrabold">Activity Log</h1>
-              <p className="text-emerald-200/70 text-sm font-medium mt-0.5">
+              <h1 className="text-xl sm:text-2xl font-serif font-extrabold">Activity Log</h1>
+              <p className="text-emerald-200/70 text-xs sm:text-sm font-medium mt-0.5">
                 {totalCount} total entries · Immutable audit trail
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={fetchLogs} disabled={loading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white text-sm font-bold transition-all">
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white text-xs sm:text-sm font-bold transition-all">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
             <button onClick={exportCSV}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 rounded-xl text-white text-sm font-bold transition-all shadow-lg shadow-emerald-900/30">
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-emerald-500 hover:bg-emerald-400 rounded-xl text-white text-xs sm:text-sm font-bold transition-all shadow-lg shadow-emerald-900/30">
               <Download size={14} /> Export CSV
             </button>
           </div>
@@ -282,7 +282,7 @@ export default function AuditLog() {
 
       {/* ── Filters ───────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col gap-3">
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -291,111 +291,113 @@ export default function AuditLog() {
               className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none text-sm font-medium text-slate-900 bg-slate-50 focus:bg-white transition-all shadow-sm" />
             {search && <button onClick={() => { setSearch(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={15} /></button>}
           </div>
-          
-          {/* Ethiopian Date Range Picker */}
-          <div className="relative">
-             <button 
-                onClick={() => setShowCalendar(!showCalendar)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all shadow-sm ${dateFrom || dateTo ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500'}`}
-             >
-                <Calendar size={18} className={dateFrom || dateTo ? 'text-emerald-500' : 'text-slate-400'} />
-                <div className="flex flex-col items-start leading-tight">
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date Range (E.C.)</span>
-                   <span className="text-xs font-bold">
-                      {dateFrom ? toEthDateDisplay(dateFrom) : 'Start Date'} 
-                      <span className="mx-2 text-slate-300">—</span> 
-                      {dateTo ? toEthDateDisplay(dateTo) : 'End Date'}
-                   </span>
-                </div>
-                <ChevronDown size={14} className={`ml-2 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
-             </button>
 
-             {showCalendar && (
-                <div className="absolute top-full right-0 mt-2 z-[100] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-6 animate-in fade-in zoom-in-95 duration-200">
-                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
-                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Range</h4>
-                      <button onClick={() => setShowCalendar(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400"><X size={18}/></button>
-                   </div>
-                   <EthiopianCalendar 
-                      allowPast={true}
-                      selected={{ 
-                         from: dateFrom ? new Date(dateFrom + 'T12:00:00') : undefined, 
-                         to: dateTo ? new Date(dateTo + 'T12:00:00') : undefined 
-                      }}
-                      onSelect={(range) => {
-                         if (range.from) {
-                            setDateFrom(format(range.from, 'yyyy-MM-dd'));
-                            // Clear old dateTo when a new start is selected
-                            if (!range.to) setDateTo('');
-                         }
-                         if (range.to) {
-                            setDateTo(format(range.to, 'yyyy-MM-dd'));
-                            setShowCalendar(false);
-                         }
-                         setPage(1);
-                      }}
-                   />
-                   {/* Apply single-day filter if only from is selected */}
-                   {dateFrom && !dateTo && (
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                         <span className="text-[10px] text-slate-400 font-bold">Single day selected</span>
-                         <div className="flex gap-2">
-                            <button onClick={() => { setDateTo(dateFrom); setShowCalendar(false); setPage(1); }}
-                               className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
-                               Apply
-                            </button>
-                            <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
-                               className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
-                               Clear
-                            </button>
-                         </div>
-                      </div>
-                   )}
-                </div>
-             )}
-          </div>
-          
-          <div className="h-8 w-px bg-slate-200 hidden lg:block" />
-
-          <div className="flex gap-2">
-             {DATE_PRESETS.map(p => (
-               <button key={p.days} 
-                 onClick={() => {
-                   const from = format(subDays(new Date(), p.days), 'yyyy-MM-dd');
-                   const to = format(new Date(), 'yyyy-MM-dd');
-                   setDateFrom(from);
-                   setDateTo(to);
-                   setPage(1);
-                   setShowCalendar(false);
-                 }}
-                 className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
-                 {p.label}
+          {/* Date controls row */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Ethiopian Date Range Picker */}
+            <div className="relative">
+               <button 
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all shadow-sm text-sm ${dateFrom || dateTo ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500'}`}
+               >
+                  <Calendar size={16} className={dateFrom || dateTo ? 'text-emerald-500' : 'text-slate-400'} />
+                  <div className="flex flex-col items-start leading-tight">
+                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range (E.C.)</span>
+                     <span className="text-[11px] font-bold">
+                        {dateFrom ? toEthDateDisplay(dateFrom) : 'Start'}
+                        <span className="mx-1 text-slate-300">—</span>
+                        {dateTo ? toEthDateDisplay(dateTo) : 'End'}
+                     </span>
+                  </div>
+                  <ChevronDown size={13} className={`transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
                </button>
-             ))}
+
+               {showCalendar && (
+                  <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-[100] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-200 max-w-[calc(100vw-2rem)]">
+                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Range</h4>
+                        <button onClick={() => setShowCalendar(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400"><X size={18}/></button>
+                     </div>
+                     <EthiopianCalendar 
+                        allowPast={true}
+                        selected={{ 
+                           from: dateFrom ? new Date(dateFrom + 'T12:00:00') : undefined, 
+                           to: dateTo ? new Date(dateTo + 'T12:00:00') : undefined 
+                        }}
+                        onSelect={(range) => {
+                           if (range.from) {
+                              setDateFrom(format(range.from, 'yyyy-MM-dd'));
+                              if (!range.to) setDateTo('');
+                           }
+                           if (range.to) {
+                              setDateTo(format(range.to, 'yyyy-MM-dd'));
+                              setShowCalendar(false);
+                           }
+                           setPage(1);
+                        }}
+                     />
+                     {dateFrom && !dateTo && (
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                           <span className="text-[10px] text-slate-400 font-bold">Single day selected</span>
+                           <div className="flex gap-2">
+                              <button onClick={() => { setDateTo(dateFrom); setShowCalendar(false); setPage(1); }}
+                                 className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
+                                 Apply
+                              </button>
+                              <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
+                                 className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
+                                 Clear
+                              </button>
+                           </div>
+                        </div>
+                     )}
+                  </div>
+               )}
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+            {/* Date Presets */}
+            <div className="flex flex-wrap gap-1.5">
+               {DATE_PRESETS.map(p => (
+                 <button key={p.days} 
+                   onClick={() => {
+                     const from = format(subDays(new Date(), p.days), 'yyyy-MM-dd');
+                     const to = format(new Date(), 'yyyy-MM-dd');
+                     setDateFrom(from);
+                     setDateTo(to);
+                     setPage(1);
+                     setShowCalendar(false);
+                   }}
+                   className="px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white border border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm">
+                   {p.label}
+                 </button>
+               ))}
+            </div>
           </div>
         </div>
 
         {/* Category filter pills */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {(Object.keys(CATEGORIES) as CategoryKey[]).map(key => {
             const cfg = CATEGORIES[key];
             const isActive = category === key;
             return (
               <button key={key} onClick={() => setCategory(isActive ? 'all' : key)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${isActive ? `${cfg.color} ${cfg.bg} ${cfg.border} shadow-sm` : 'text-slate-500 bg-white border-slate-200 hover:border-slate-300'}`}>
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${isActive ? `${cfg.color} ${cfg.bg} ${cfg.border} shadow-sm` : 'text-slate-500 bg-white border-slate-200 hover:border-slate-300'}`}>
                 {cfg.icon}{cfg.label}
               </button>
             );
           })}
           {hasFilters && (
-            <button onClick={clearFilters} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 transition-all hover:bg-rose-100">
+            <button onClick={clearFilters} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 transition-all hover:bg-rose-100">
               <X size={12} />Clear Filters
             </button>
           )}
         </div>
 
         {/* Result count */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <p className="text-sm text-slate-500 font-medium">
@@ -409,19 +411,19 @@ export default function AuditLog() {
       {/* ── Log Table ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-20 text-center flex flex-col items-center">
+          <div className="p-16 text-center flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-[#268053]/20 border-t-[#268053] rounded-full animate-spin mb-4" />
             <p className="text-slate-500 font-bold">Loading audit trail…</p>
           </div>
         ) : error ? (
-          <div className="p-16 text-center flex flex-col items-center text-rose-500">
+          <div className="p-12 text-center flex flex-col items-center text-rose-500">
             <AlertCircle size={48} className="mb-4" />
             <p className="font-black text-lg">Failed to load logs</p>
             <p className="text-sm opacity-80 mt-1 mb-4">{error}</p>
             <button onClick={fetchLogs} className="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 transition-colors">Retry</button>
           </div>
         ) : paginated.length === 0 ? (
-          <div className="p-20 text-center flex flex-col items-center">
+          <div className="p-12 text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
               <History size={32} className="text-slate-300" />
             </div>
@@ -431,13 +433,17 @@ export default function AuditLog() {
           </div>
         ) : (
           <>
-            {/* Table header */}
-            <div className="grid grid-cols-[1.2fr_1.5fr_1.5fr_1fr_48px] bg-slate-900 text-slate-400 px-6 py-4 gap-4 text-[10px] font-black uppercase tracking-[0.2em]">
+            {/* Desktop Table header — hidden on mobile */}
+            <div className="hidden md:grid md:grid-cols-[1.2fr_1.5fr_1.5fr_1fr_48px] bg-slate-900 text-slate-400 px-6 py-4 gap-4 text-[10px] font-black uppercase tracking-[0.2em]">
               <span className="flex items-center gap-2"><Clock size={12} className="text-emerald-500"/> Timestamp</span>
               <span className="flex items-center gap-2"><User size={12} className="text-emerald-500"/> Authorized User</span>
               <span className="flex items-center gap-2"><Activity size={12} className="text-emerald-500"/> Action Context</span>
               <span className="flex items-center gap-2"><Info size={12} className="text-emerald-500"/> Overview</span>
               <span/>
+            </div>
+            {/* Mobile header bar */}
+            <div className="md:hidden bg-slate-900 text-slate-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+              <Activity size={12} className="text-emerald-500"/> Audit Entries
             </div>
 
             {/* Rows */}
@@ -447,10 +453,12 @@ export default function AuditLog() {
                 const catCfg = CATEGORIES[catKey];
                 const isOpen = expanded === log.id;
                 return (
-                  <div key={log.id} ref={el => logRefs.current[log.id] = el} className="group rounded-xl transition-all duration-500">
+                  <div key={log.id} ref={el => logRefs.current[log.id] = el} className="group transition-all duration-500">
+
+                    {/* ── Desktop row ── */}
                     <button
                       onClick={() => setExpanded(isOpen ? null : log.id)}
-                      className={`w-full grid grid-cols-[1.2fr_1.5fr_1.5fr_1fr_48px] px-6 py-5 gap-4 items-center text-left transition-all duration-300 ${isOpen ? 'bg-slate-50/80 shadow-inner' : 'hover:bg-slate-50'}`}>
+                      className={`hidden md:grid w-full md:grid-cols-[1.2fr_1.5fr_1.5fr_1fr_48px] px-6 py-5 gap-4 items-center text-left transition-all duration-300 ${isOpen ? 'bg-slate-50/80 shadow-inner' : 'hover:bg-slate-50'}`}>
 
                       {/* Timestamp */}
                       <div className="flex flex-col gap-0.5">
@@ -462,31 +470,29 @@ export default function AuditLog() {
                       </div>
 
                       {/* User */}
-                      <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1b4332] to-[#081c15] flex items-center justify-center text-emerald-400 text-xs font-black shadow-lg shadow-emerald-900/10 border border-emerald-500/20">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1b4332] to-[#081c15] flex items-center justify-center text-emerald-400 text-xs font-black border border-emerald-500/20">
                             {(log.full_name || log.user_name || 'S').charAt(0).toUpperCase()}
                           </div>
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 truncate tracking-tight">{log.full_name || 'System Auto'}</p>
-                          <p className="text-[11px] font-bold text-slate-400 truncate flex items-center gap-1 italic">
-                            @{log.user_name || 'system_service'}
-                          </p>
+                          <p className="text-sm font-black text-slate-900 truncate">{log.full_name || 'System Auto'}</p>
+                          <p className="text-[11px] font-bold text-slate-400 truncate italic">@{log.user_name || 'system_service'}</p>
                         </div>
                       </div>
 
                       {/* Action */}
                       <div className="flex flex-col gap-2">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black border w-fit uppercase tracking-wider ${catCfg.color} ${catCfg.bg} ${catCfg.border} shadow-sm`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black border w-fit uppercase tracking-wider ${catCfg.color} ${catCfg.bg} ${catCfg.border} shadow-sm`}>
                           {catCfg.icon}{catCfg.label}
                         </span>
                         <span className="text-xs text-slate-700 font-bold leading-tight line-clamp-1">{log.action}</span>
                       </div>
 
                       {/* Details preview */}
-                      <div className="hidden sm:block">
+                      <div>
                         <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed italic">"{log.details}"</p>
                       </div>
 
@@ -495,6 +501,44 @@ export default function AuditLog() {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-emerald-100 text-emerald-600 rotate-180' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}`}>
                           <ChevronDown size={18} />
                         </div>
+                      </div>
+                    </button>
+
+                    {/* ── Mobile/Tablet card row ── */}
+                    <button
+                      onClick={() => setExpanded(isOpen ? null : log.id)}
+                      className={`md:hidden w-full px-4 py-4 text-left transition-all duration-300 ${isOpen ? 'bg-slate-50/80' : 'hover:bg-slate-50'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1b4332] to-[#081c15] flex items-center justify-center text-emerald-400 text-xs font-black border border-emerald-500/20">
+                              {(log.full_name || log.user_name || 'S').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-slate-900 truncate">{log.full_name || 'System Auto'}</p>
+                            <p className="text-[11px] font-bold text-slate-400 italic">@{log.user_name || 'system_service'}</p>
+                          </div>
+                        </div>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${isOpen ? 'bg-emerald-100 text-emerald-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black border uppercase tracking-wider ${catCfg.color} ${catCfg.bg} ${catCfg.border}`}>
+                          {catCfg.icon}{catCfg.label}
+                        </span>
+                        <span className="text-xs text-slate-700 font-bold truncate max-w-[200px]">{log.action}</span>
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Clock size={10} className="text-emerald-500" />
+                          {toEthDateDisplay(log.timestamp)}
+                        </span>
+                        <span className="font-bold">{toEthTime(log.timestamp)}</span>
                       </div>
                     </button>
 
@@ -510,10 +554,10 @@ export default function AuditLog() {
 
       {/* ── Pagination ────────────────────────────────────────────────── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 sm:px-6 py-4 rounded-2xl border border-slate-200 shadow-sm">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm font-bold text-slate-600">
-            <ChevronLeft size={15} /> Previous
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs sm:text-sm font-bold text-slate-600">
+            <ChevronLeft size={14} /> Previous
           </button>
           <div className="flex items-center gap-1.5">
             {totalPages <= 7 ? (
@@ -554,7 +598,7 @@ export default function AuditLog() {
       )}
 
       {/* ── Compliance Banner ─────────────────────────────────────────── */}
-      <div className="flex items-start gap-4 p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+      <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6 bg-blue-50 border border-blue-100 rounded-2xl">
         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
           <ShieldCheck className="text-blue-600" size={20} />
         </div>

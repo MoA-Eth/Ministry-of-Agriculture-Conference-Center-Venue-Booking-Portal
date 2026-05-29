@@ -144,7 +144,7 @@ function Counter({ value, duration = 2500 }: { value: number; duration?: number 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      const easedProgress = 1 - Math.pow(1 - progress, 5); 
+      const easedProgress = 1 - Math.pow(1 - progress, 5);
       setCount(Math.floor(easedProgress * value));
       if (progress < 1) requestAnimationFrame(animate);
     };
@@ -252,7 +252,7 @@ export default function LandingPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
-  
+
   // MOBILE MENU STATE
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -262,7 +262,7 @@ export default function LandingPage() {
     if (HERO_IMAGES.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
-    }, 8000); 
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -395,16 +395,15 @@ export default function LandingPage() {
       )}
 
       {/* Top Navigation Bar - REFINED RESPONSIVENESS */}
-      <nav 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 animate-[slide-down_0.8s_cubic-bezier(0.16,1,0.3,1)] ${
-          isScrolled 
-            ? 'bg-white/95 backdrop-blur-md py-3 shadow-lg border-b border-slate-200 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20' 
+      <nav
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 animate-[slide-down_0.8s_cubic-bezier(0.16,1,0.3,1)] ${isScrolled
+            ? 'bg-white/95 backdrop-blur-md py-3 shadow-lg border-b border-slate-200 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20'
             : 'bg-white border-b border-slate-100 py-4 sm:py-5 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20'
-        }`}
+          }`}
       >
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          <div 
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0" 
+          <div
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0"
             onClick={() => navigate('/')}
           >
             <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
@@ -459,8 +458,8 @@ export default function LandingPage() {
                 </button>
               </div>
             )}
-            <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-slate-100 text-[#268053]' : 'text-slate-800 hover:bg-slate-50'}`}
               aria-label="Toggle Menu"
             >
@@ -484,16 +483,16 @@ export default function LandingPage() {
               ].map((item) => {
                 if (item.auth && !token) return null;
                 return (
-                  <a 
+                  <a
                     key={item.label}
-                    href={item.path} 
-                    onClick={(e) => { 
-                      e.preventDefault(); 
+                    href={item.path}
+                    onClick={(e) => {
+                      e.preventDefault();
                       const [route, hash] = item.path.split('#');
                       if (hash) navigate(`${route}#${hash}`);
                       else navigate(route);
-                      setIsMobileMenuOpen(false); 
-                    }} 
+                      setIsMobileMenuOpen(false);
+                    }}
                     className="flex items-center justify-between p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl transition-all group"
                   >
                     <span className="text-base font-bold text-slate-800 group-hover:text-[#268053]">{item.label}</span>
@@ -501,16 +500,16 @@ export default function LandingPage() {
                   </a>
                 );
               })}
-              
+
               {!token && (
                 <div className="grid grid-cols-2 gap-4 mt-6">
                   <button onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }} className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-100 text-slate-600">Login</button>
                   <button onClick={() => { navigate('/register'); setIsMobileMenuOpen(false); }} className="w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest bg-[#268053] text-white shadow-lg">Register</button>
                 </div>
               )}
-              
+
               <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">© {new Date().getFullYear()} MoA Conference Center</p>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">© {new Date().getFullYear()} MoA Conference Center</p>
               </div>
             </div>
           </div>
@@ -522,18 +521,18 @@ export default function LandingPage() {
         <section className="relative w-full overflow-visible min-h-[400px] sm:min-h-[550px] pt-24 pb-20 sm:pb-24 flex flex-col items-center justify-center text-center">
           <div className="absolute inset-0 z-0 overflow-hidden">
             {HERO_IMAGES.map((img, idx) => (
-              <img 
+              <img
                 key={img}
-                src={img} 
-                alt={`Professional Conference Hall ${idx + 1}`} 
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${idx === currentHeroIndex ? 'opacity-100' : 'opacity-0'}`} 
-                style={{ 
+                src={img}
+                alt={`Professional Conference Hall ${idx + 1}`}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${idx === currentHeroIndex ? 'opacity-100' : 'opacity-0'}`}
+                style={{
                   animation: idx === currentHeroIndex ? 'zoom-out 20s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'none'
                 }}
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/95" />
-            
+
             {HERO_IMAGES.length > 1 && (
               <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex gap-2">
                 {HERO_IMAGES.map((_, idx) => (
@@ -609,7 +608,7 @@ export default function LandingPage() {
               {venues.map((venue, i) => {
                 const isOutOfOrder = venue.status === 'out_of_order';
                 const isVipVenue = (venue.name || '').toLowerCase().includes('vip');
-                
+
                 const purposes = (venue.bestFor || venue.best_for || 'General Facility').split(',').map((p: string) => p.trim()).filter(Boolean);
 
                 return (
@@ -646,7 +645,7 @@ export default function LandingPage() {
                             })()}
                           </div>
                         )}
-                        
+
                         {/* VIP EXCLUSIVE BADGE */}
                         {isVipVenue && (
                           <span className="w-fit text-[8px] sm:text-[9px] uppercase tracking-widest px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-black bg-purple-600 text-white shadow-lg flex items-center gap-1 border border-purple-400">
@@ -663,26 +662,26 @@ export default function LandingPage() {
                           {venue.type}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 mt-2 sm:mt-3">
                         <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest border ${isOutOfOrder ? 'bg-slate-50 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'}`}>
-                          <Users size={14} className={isOutOfOrder ? 'text-slate-400' : 'text-emerald-500'} /> 
+                          <Users size={14} className={isOutOfOrder ? 'text-slate-400' : 'text-emerald-500'} />
                           {venue.capacity} Max
                         </div>
                       </div>
 
                       <div className="mt-auto pt-4 sm:pt-6 border-t border-slate-50">
-                        
+
                         <div className="flex flex-col mb-4 sm:mb-6">
                           <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-[#268053] mb-2 sm:mb-3 leading-none">Upcoming Schedule</span>
 
                           {(() => {
                             if (isOutOfOrder) return <p className="text-[10px] sm:text-xs font-medium text-slate-400 italic">Schedule unavailable</p>;
-                            
+
                             // NEW CHECK: Protect VIP Schedules
                             if (isVipVenue) return (
                               <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-2.5 sm:p-3 flex items-center gap-2">
-                                <Crown size={14} className="text-purple-400"/>
+                                <Crown size={14} className="text-purple-400" />
                                 <span className="text-[10px] sm:text-xs font-bold text-purple-600/70">Schedule Restricted</span>
                               </div>
                             );
@@ -701,7 +700,7 @@ export default function LandingPage() {
                           })()}
 
                         </div>
-                        
+
                         <div className="flex flex-col mb-6 sm:mb-8">
                           <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-[#268053] mb-2 sm:mb-3 leading-none">Ideal Setting For</span>
                           <div className="flex flex-col gap-1.5 sm:gap-2">
@@ -722,7 +721,7 @@ export default function LandingPage() {
                         ) : isVipVenue ? (
                           !isPrivilegedUser ? (
                             <div className="w-full py-4 sm:py-5 text-[10px] sm:text-xs font-black bg-[#faf8ff] text-[#b181f7] rounded-3xl border border-[#eee4ff] flex items-center justify-center gap-2.5 shadow-sm">
-                              <Crown className="w-4 h-4 text-[#b181f7]" strokeWidth={2.5} /> 
+                              <Crown className="w-4 h-4 text-[#b181f7]" strokeWidth={2.5} />
                               <span className="uppercase tracking-[0.08em] font-black">VIP Exclusive Facility</span>
                             </div>
                           ) : (

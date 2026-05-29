@@ -468,35 +468,39 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
               </div>
 
               {form.dailySchedules?.length > 0 && (
-                <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="space-y-3 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-100">
                   <p className="text-xs font-medium text-black uppercase tracking-widest mb-2">Time Adjustments per Day</p>
                   {form.dailySchedules.map((s, idx) => {
                     const conflict = dailyConflicts.find(c => c.date === s.date);
                     return (
-                      <div key={s.date} className={`flex flex-col border-2 p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                          <span className="text-[11px] font-black uppercase text-slate-600 tracking-widest flex items-center gap-2"><Clock size={14} className="text-emerald-500"/> {getEthDateString(s.date)}</span>
-                          <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-1.5 cursor-pointer">
-                              <input type="checkbox" checked={s.allDay || false} onChange={e => updateSchedule(idx, 'allDay', e.target.checked)} className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500" />
-                              <span className="text-[10px] font-black uppercase text-slate-500">All Day</span>
-                            </label>
-                            {!s.allDay ? (
-                              <div className="flex items-center gap-2">
-                                <select value={s.startTime?.substring(0, 5)} onChange={e => updateSchedule(idx, 'startTime', e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20">{generateHourOptions()}</select>
-                                <span className="text-[10px] text-slate-300 font-black">TO</span>
-                                <select value={s.endTime?.substring(0, 5)} onChange={e => updateSchedule(idx, 'endTime', e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20">{generateHourOptions()}</select>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-md uppercase tracking-widest">Full Day Locked</span>
-                            )}
-                          </div>
+                      <div key={s.date} className={`flex flex-col border-2 p-3 sm:p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
+                        {/* Date label */}
+                        <span className="text-[11px] font-black uppercase text-slate-600 tracking-widest flex items-center gap-2 mb-3">
+                          <Clock size={13} className="text-emerald-500 shrink-0"/> {getEthDateString(s.date)}
+                        </span>
+
+                        {/* Controls row — wraps on small screens */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                            <input type="checkbox" checked={s.allDay || false} onChange={e => updateSchedule(idx, 'allDay', e.target.checked)} className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500" />
+                            <span className="text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">All Day</span>
+                          </label>
+
+                          {!s.allDay ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <select value={s.startTime?.substring(0, 5)} onChange={e => updateSchedule(idx, 'startTime', e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20">{generateHourOptions()}</select>
+                              <span className="text-[10px] text-slate-300 font-black">TO</span>
+                              <select value={s.endTime?.substring(0, 5)} onChange={e => updateSchedule(idx, 'endTime', e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20">{generateHourOptions()}</select>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">Full Day Locked</span>
+                          )}
                         </div>
 
                         {conflict && (
-                          <div className="mt-3 pt-3 border-t border-slate-200/50 flex items-center gap-2 animate-in fade-in">
-                            {conflict.type === 'hard_overlap' ? <ShieldAlert size={14} className="text-red-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
-                            <p className={`text-[10px] font-black uppercase tracking-widest ${conflict.type === 'hard_overlap' ? 'text-red-600' : 'text-amber-600'}`}>{conflict.msg}</p>
+                          <div className="mt-3 pt-3 border-t border-slate-200/50 flex items-start gap-2 animate-in fade-in">
+                            {conflict.type === 'hard_overlap' ? <ShieldAlert size={13} className="text-red-500 shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />}
+                            <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${conflict.type === 'hard_overlap' ? 'text-red-600' : 'text-amber-600'}`}>{conflict.msg}</p>
                           </div>
                         )}
                       </div>
