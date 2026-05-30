@@ -828,6 +828,11 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-center sm:text-left">© {new Date().getFullYear()} MoA Ethiopia. All rights reserved.</p>
+            <div className="flex items-center gap-6">
+              <a href="/privacy-policy" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }} className="text-slate-400 hover:text-emerald-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors">
+                Privacy Policy
+              </a>
+            </div>
           </div>
         </div>
       </footer>

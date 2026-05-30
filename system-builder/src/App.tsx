@@ -12,7 +12,8 @@ import Register from "@/components/Register";
 // Add the new imports here:
 import PublicBookingPage from "./pages/PublicBookingPage";
 import TrackBookingPage from "./pages/TrackBookingPage";
-import VenueOperations from "@/components/VenueOperations"; // <-- Added import!
+import VenueOperations from "@/components/VenueOperations";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -31,7 +32,8 @@ const App = () => (
             {/* New Routes added here: */}
             <Route path="/book" element={<PublicBookingPage />} />
             <Route path="/track" element={<TrackBookingPage />} />
-            <Route path="/venue-operations" element={<VenueOperations />} /> {/* <-- Added Route! */}
+            <Route path="/venue-operations" element={<VenueOperations />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
