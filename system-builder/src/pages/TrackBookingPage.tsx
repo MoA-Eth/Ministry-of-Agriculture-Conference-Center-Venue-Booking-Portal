@@ -44,11 +44,15 @@ export default function TrackBookingPage() {
         return { label: 'Confirmed (Paid)', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
       case 'partial_paid':
         return { label: '1st Round Paid', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+      case 'management_approved':
+        return { label: 'MoA Approved', color: 'bg-teal-100 text-teal-700 border-teal-200' };
       case 'approved':
         return { label: 'VIP Approved', color: 'bg-purple-100 text-purple-700 border-purple-200' };
       case 'rejected':
       case 'cancelled':
         return { label: status.charAt(0).toUpperCase() + status.slice(1), color: 'bg-rose-100 text-rose-700 border-rose-200' };
+      case 'pending':
+        return { label: 'Awaiting MoA Approval', color: 'bg-amber-100 text-amber-700 border-amber-200' };
       default:
         return { label: 'Pending / Tentative', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
@@ -94,7 +98,7 @@ export default function TrackBookingPage() {
   };
 
   const normalizedStatus = booking?.status?.toLowerCase() || '';
-  const isLocked = booking ? isLockedForEditing(booking.startDate, booking.startTime) && ['paid', 'approved', 'pending', 'partial_paid'].includes(normalizedStatus) : false;
+  const isLocked = booking ? isLockedForEditing(booking.startDate, booking.startTime) && ['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) : false;
   const isVipBooking = booking?.eventTitle?.includes('⭐ [VIP OVERRIDE]');
 
   const handleCancel = async () => {
@@ -261,7 +265,7 @@ export default function TrackBookingPage() {
              )}
 
              {/* EDIT AND CANCEL ACTIONS BAR */}
-             {['paid', 'approved', 'pending', 'partial_paid'].includes(normalizedStatus) && (
+             {['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
                 <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-slate-100 mt-4">
                    {isLocked ? (
                      <div className="w-full flex items-center justify-center gap-3 text-amber-700 bg-amber-50 p-4 rounded-xl border border-amber-200">
@@ -270,7 +274,7 @@ export default function TrackBookingPage() {
                      </div>
                    ) : (
                      <>
-                       {['pending', 'partial_paid'].includes(normalizedStatus) && (
+                       {['pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
                          <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
                            <Edit2 size={16} /> Edit Details
                          </button>
@@ -284,7 +288,7 @@ export default function TrackBookingPage() {
              )}
              
              {/* Read-only notice */}
-             {!['paid', 'approved', 'pending', 'partial_paid'].includes(normalizedStatus) && (
+             {!['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
                <div className="pt-6 border-t border-slate-100 text-center">
                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">This booking can no longer be edited or cancelled.</p>
                </div>

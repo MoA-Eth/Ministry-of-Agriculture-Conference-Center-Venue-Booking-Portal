@@ -25,7 +25,7 @@ class IsSystemAdmin(BasePermission):
 
 class IsEventManagementOrAdmin(BasePermission):
     """Event management team, finance admin, and system admins."""
-    ALLOWED = {'event_management', 'system_admin', 'admin_finance'}
+    ALLOWED = {'event_management', 'system_admin', 'admin_finance', 'leadership'}
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and get_role(request.user) in self.ALLOWED
@@ -65,3 +65,9 @@ class IsAuthenticatedOrPublicRead(BasePermission):
         if request.method in SAFE_METHODS and is_public:
             return True
         return request.user and request.user.is_authenticated
+
+
+class IsLeadership(BasePermission):
+    """Only leadership can access. System admins are excluded."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and get_role(request.user) == 'leadership'

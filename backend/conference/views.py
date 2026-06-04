@@ -43,6 +43,7 @@ from .permissions import (
     IsICTOrAdmin,
     IsCateringOrAdmin,
     IsAuthenticatedOrPublicRead,
+    IsLeadership,
 )
 
 # ---------------------------------------------------------------------------
@@ -312,9 +313,20 @@ class BookingViewSet(viewsets.ModelViewSet):
             self._trigger_email(booking, new_status)
 
     def _trigger_email(self, booking, status):
-        valid_triggers = ['pending', 'partial_paid', 'paid', 'approved', 'rejected', 'cancelled', 'completed']
+        valid_triggers = ['pending', 'management_approved', 'management_rejected', 'partial_paid', 'paid', 'approved', 'rejected', 'cancelled', 'completed']
         if status in valid_triggers:
-            send_automated_email(booking, status)
+            import threading
+            def run_email():
+                from conference.models import Booking
+                from conference.utils import send_automated_email
+                try:
+                    fresh_booking = Booking.objects.select_related('venue').get(id=booking.id)
+                    send_automated_email(fresh_booking, status)
+                except Exception as e:
+                    print(f"[BACKGROUND EMAIL ERROR] {e}")
+
+            thread = threading.Thread(target=run_email)
+            thread.start()
 
     def get_permissions(self):
         if self.action in ['create', 'track', 'public_cancel', 'public_edit']:
@@ -330,17 +342,20 @@ class BookingViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_authenticated:
             role = get_role(user)
-            if role in ('system_admin', 'event_management', 'admin_finance', 'leadership'):
-                return qs
-
-            scheduled_q = Q(status__in=['pending', 'partial_paid', 'paid', 'approved'])
-
-            if role == 'organizer':
+            if role in ('system_admin', 'leadership'):
+                pass
+            elif role in ('event_management', 'admin_finance'):
+                # Event management and Finance only see bookings that have passed MoA management approval
+                qs = qs.exclude(status='pending')
+            elif role == 'organizer':
+                scheduled_q = Q(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'])
                 qs = qs.filter(Q(user=user) | scheduled_q).distinct()
             elif role == 'ict_admin':
                 qs = qs.filter(technical_services__isnull=False).distinct()
             elif role == 'catering_support':
                 qs = qs.filter(support_services__isnull=False).distinct()
+            else:
+                qs = qs.none()
         else:
             return qs.none()
 
@@ -369,11 +384,11 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         self._trigger_email(booking, 'pending')
 
-        # Notify admins
+        # Notify leadership (MoA Management) instead of Event Management first
         Notification.objects.create(
-            role_target='event_management',
-            title='New Booking Received',
-            message=f"Event '{booking.event_title}' has been submitted for review.",
+            role_target='leadership',
+            title='New Booking Awaiting Approval',
+            message=f"Event '{booking.event_title}' requires MoA Management review.",
             type='info',
             link='#/manage-bookings'
         )
@@ -426,6 +441,10 @@ class BookingViewSet(viewsets.ModelViewSet):
         if new_status == 'rejected' and not rejection_reason: 
             return Response({'rejection_reason': 'A reason is required when rejecting.'}, status=400)
 
+        # Block processing of pending bookings (they must be management_approved first)
+        if booking.status == 'pending' and new_status in ('partial_paid', 'paid', 'approved'):
+            return Response({'error': 'This booking must be approved by MoA Management before it can be processed.'}, status=400)
+
         # Trigger destruction of other events if VIP Override is triggered
         if new_status == 'approved':
             self._handle_vip_clashes(booking)
@@ -456,6 +475,84 @@ class BookingViewSet(viewsets.ModelViewSet):
         )
 
         self._trigger_email(booking, new_status)
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['patch'], url_path='approve_management', permission_classes=[IsLeadership])
+    def approve_management(self, request, pk=None):
+        booking = self.get_object()
+        if booking.status != 'pending':
+            return Response({'error': 'Only pending bookings can be approved by MoA Management.'}, status=400)
+
+        old_status = booking.status
+        booking.status = 'management_approved'
+        booking.management_approved_by = request.user
+        booking.management_approved_at = timezone.now()
+        booking.save()
+
+        # Send notification to event_management role
+        Notification.objects.create(
+            role_target='event_management',
+            title='Booking Approved by MoA Management',
+            message=f"Booking '{booking.event_title}' has been approved by MoA Management and is ready for payment processing.",
+            type='success',
+            link='#/manage-bookings'
+        )
+
+        # Notify organizer
+        if booking.user:
+            Notification.objects.create(
+                recipient=booking.user,
+                title='Booking Approved by MoA Management',
+                message=f"Your booking for '{booking.event_title}' was approved by MoA Management. It is now with the Event Management team for processing.",
+                type='success',
+                link='#/my-bookings'
+            )
+
+        # Audit Log
+        log_action(
+            request.user,
+            "Booking Approved by MoA Management",
+            f"Booking MOA-BKG-{booking.id} ({booking.event_title}) was approved by MoA Management.",
+            request
+        )
+
+        self._trigger_email(booking, 'management_approved')
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['patch'], url_path='reject_management', permission_classes=[IsLeadership])
+    def reject_management(self, request, pk=None):
+        booking = self.get_object()
+        if booking.status != 'pending':
+            return Response({'error': 'Only pending bookings can be rejected by MoA Management.'}, status=400)
+
+        rejection_reason = request.data.get('rejection_reason', '')
+        if not rejection_reason:
+            return Response({'rejection_reason': 'A reason is required when rejecting.'}, status=400)
+
+        old_status = booking.status
+        booking.status = 'rejected'
+        booking.rejection_reason = rejection_reason
+        booking.save()
+
+        # Notify organizer
+        if booking.user:
+            Notification.objects.create(
+                recipient=booking.user,
+                title='Booking Rejected by MoA Management',
+                message=f"Your booking for '{booking.event_title}' was rejected by MoA Management. Reason: {rejection_reason}",
+                type='error',
+                link='#/my-bookings'
+            )
+
+        # Audit Log
+        log_action(
+            request.user,
+            "Booking Rejected by MoA Management",
+            f"Booking MOA-BKG-{booking.id} ({booking.event_title}) was rejected by MoA Management. Reason: {rejection_reason}",
+            request
+        )
+
+        self._trigger_email(booking, 'management_rejected')
         return Response(BookingSerializer(booking, context={'request': request}).data)
 
     @action(detail=True, methods=['patch'], url_path='cancel', permission_classes=[IsAuthenticated])

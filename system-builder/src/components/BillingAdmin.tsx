@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '@/lib/app-context';
+import { Booking } from '@/lib/types';
 import { Banknote, FileText, CheckCircle2, Clock, Search, Filter, AlertTriangle, ArrowUpRight, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 

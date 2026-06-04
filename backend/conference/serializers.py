@@ -192,6 +192,7 @@ class BookingSerializer(serializers.ModelSerializer):
     venue_name = serializers.CharField(source='venue.name', read_only=True)
     venue_capacity = serializers.IntegerField(source='venue.capacity', read_only=True)
     booked_by_name = serializers.SerializerMethodField()
+    management_approved_by_name = serializers.CharField(source='management_approved_by.system_profile.name', read_only=True)
     daily_schedules = DailySchedulesField(required=False, default=list)
     
     assigned_tech = serializers.JSONField(required=False, write_only=True)

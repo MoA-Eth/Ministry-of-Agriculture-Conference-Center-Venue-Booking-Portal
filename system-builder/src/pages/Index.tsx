@@ -44,8 +44,8 @@ function AppContent() {
       const validPages = [
         'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
         'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
-        'venue-operations', 'technical-tasks', 'catering-tasks', 'audit-log',
-        'business-rules', 'billing-admin'
+        'venue-operations', 'message-center', 'technical-tasks', 'catering-tasks',
+        'audit-log', 'business-rules', 'billing-admin'
       ];
       
       if (validPages.includes(hash)) {

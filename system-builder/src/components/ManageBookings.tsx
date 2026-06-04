@@ -14,7 +14,8 @@ import { Booking } from '@/lib/types';
 
 // 1. STATUS STYLES
 const statusStyles: Record<string, { bg: string, text: string, label: string, dot: string }> = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending / Tentative', dot: 'bg-amber-500' },
+  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending MoA Approval', dot: 'bg-amber-500' },
+  management_approved: { bg: 'bg-teal-50', text: 'text-teal-700', label: 'MoA Approved', dot: 'bg-teal-500' },
   partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: '1st Round Paid', dot: 'bg-blue-500' },
   paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Fully Paid', dot: 'bg-emerald-500' },
   approved: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'VIP Approved', dot: 'bg-purple-500' },
@@ -23,7 +24,7 @@ const statusStyles: Record<string, { bg: string, text: string, label: string, do
   completed: { bg: 'bg-slate-800', text: 'text-white', label: 'Completed', dot: 'bg-white' },
 };
 
-type TabFilter = 'action' | 'partial' | 'confirmed' | 'vip' | 'rejected' | 'all';
+type TabFilter = 'action' | 'mgmt_approved' | 'partial' | 'confirmed' | 'vip' | 'rejected' | 'all';
 
 // --- ETHIOPIAN DATE CONVERTER ---
 const toEthDateString = (gStr: string | undefined | null) => {
@@ -41,12 +42,25 @@ const toEthDateString = (gStr: string | undefined | null) => {
 
 
 export default function ManageBookings() {
-  const { bookings, updateBookingStatus, cancelBooking, venues, technicalServices, supportServices, toEthTime } = useApp();
-  const [activeTab, setActiveTab] = useState<TabFilter>('action');
+  const { role, bookings, updateBookingStatus, cancelBooking, approveManagement, venues, technicalServices, supportServices, toEthTime } = useApp();
+  const [activeTab, setActiveTab] = useState<TabFilter>(role === 'leadership' ? 'action' : 'mgmt_approved');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  // Sync activeTab when role changes or loads
+  useEffect(() => {
+    setActiveTab(role === 'leadership' ? 'action' : 'mgmt_approved');
+  }, [role]);
+
+  const visibleTabs = useMemo(() => {
+    if (role === 'leadership') {
+      return ['action', 'mgmt_approved', 'rejected', 'all'] as TabFilter[];
+    } else {
+      return ['mgmt_approved', 'partial', 'confirmed', 'vip', 'rejected', 'all'] as TabFilter[];
+    }
+  }, [role]);
 
   // Filtering & Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,8 +120,13 @@ export default function ManageBookings() {
     return venueMatch && dateMatch && statusMatch && searchMatch;
   });
 
+  const mgmtApprovedStatuses = role === 'leadership' 
+    ? ['management_approved', 'partial_paid', 'paid', 'approved', 'completed'] 
+    : ['management_approved'];
+
   const counts = {
     action: baseFilteredBookings.filter(b => b.status === 'pending').length,
+    mgmt_approved: baseFilteredBookings.filter(b => mgmtApprovedStatuses.includes(b.status)).length,
     partial: baseFilteredBookings.filter(b => b.status === 'partial_paid').length,
     confirmed: baseFilteredBookings.filter(b => ['paid', 'completed'].includes(b.status)).length,
     vip: baseFilteredBookings.filter(b => b.status === 'approved').length,
@@ -118,6 +137,7 @@ export default function ManageBookings() {
   const finalFilteredBookings = baseFilteredBookings.filter(b => {
     if (activeTab === 'all') return true;
     if (activeTab === 'action') return b.status === 'pending';
+    if (activeTab === 'mgmt_approved') return mgmtApprovedStatuses.includes(b.status);
     if (activeTab === 'partial') return b.status === 'partial_paid';
     if (activeTab === 'confirmed') return ['paid', 'completed'].includes(b.status);
     if (activeTab === 'vip') return b.status === 'approved';
@@ -205,14 +225,32 @@ export default function ManageBookings() {
     e.stopPropagation();
     setRejectingId(id);
     setExpandedId(id);
-    setRejectReason('We regret to inform you that your booking request could not be accommodated. This time slot has been overridden by a high-priority state/ministerial event, or there was a scheduling conflict. We apologize for any inconvenience.');
+    const targetBooking = bookings.find(b => String(b.id) === String(id));
+    if (targetBooking?.status === 'pending' && role === 'leadership') {
+      setRejectReason('After careful review by Ministry of Agriculture leadership, your booking request has been declined. The requested venue/time slot cannot be allocated at this time due to scheduling priorities or policy considerations. Please contact the MoA Events team for further guidance.');
+    } else {
+      setRejectReason('We regret to inform you that your booking request could not be accommodated. This time slot has been overridden by a high-priority state/ministerial event, or there was a scheduling conflict. We apologize for any inconvenience.');
+    }
   };
 
-  const handleConfirmReject = (id: string, e: React.MouseEvent) => {
+  const handleConfirmReject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!rejectReason.trim()) return toast.error('Please provide a reason');
-    updateBookingStatus(id, 'rejected', rejectReason.trim());
-    setRejectingId(null);
+
+    const targetBooking = bookings.find(b => String(b.id) === String(id));
+    setPendingActionId(`${id}-reject`);
+    try {
+      if (targetBooking?.status === 'pending' && role === 'leadership') {
+        await approveManagement(id, false, rejectReason.trim());
+      } else {
+        await updateBookingStatus(id, 'rejected', rejectReason.trim());
+      }
+      setRejectingId(null);
+    } catch (err) {
+      toast.error('Failed to reject booking request.');
+    } finally {
+      setPendingActionId(null);
+    }
   };
 
   return (
@@ -288,7 +326,7 @@ export default function ManageBookings() {
 
       {/* NEW Filter & Search Bar Layout */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 shadow-sm flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-        
+
         {/* Left Side: Filter Label + Global Search Input */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
           <div className="flex items-center gap-2 text-slate-500 shrink-0">
@@ -306,10 +344,10 @@ export default function ManageBookings() {
             />
           </div>
         </div>
-        
+
         {/* Right Side: Dropdowns */}
         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full xl:w-auto">
-          
+
           {/* Venue Dropdown */}
           <div className="relative w-full sm:w-auto shrink-0">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -344,7 +382,7 @@ export default function ManageBookings() {
 
           {/* Ethiopian Calendar Popover */}
           <div className="relative w-full sm:w-auto shrink-0">
-            <div 
+            <div
               onClick={() => setShowCalendar(!showCalendar)}
               className="flex items-center gap-2 w-full sm:w-44 pl-9 pr-4 py-2.5 text-sm font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none hover:bg-slate-100 hover:border-emerald-200 transition-all cursor-pointer"
             >
@@ -356,12 +394,12 @@ export default function ManageBookings() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowCalendar(false)} />
                 <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 animate-in fade-in slide-in-from-top-2">
-                  <EthiopianCalendar 
-                    selected={{ from: filterDate ? parseISO(filterDate) : undefined, to: filterDate ? parseISO(filterDate) : undefined }} 
-                    onSelect={(r) => { 
-                      setFilterDate(r?.from ? format(r.from, 'yyyy-MM-dd') : ''); 
-                      if(r?.from) setShowCalendar(false);
-                    }} 
+                  <EthiopianCalendar
+                    selected={{ from: filterDate ? parseISO(filterDate) : undefined, to: filterDate ? parseISO(filterDate) : undefined }}
+                    onSelect={(r) => {
+                      setFilterDate(r?.from ? format(r.from, 'yyyy-MM-dd') : '');
+                      if (r?.from) setShowCalendar(false);
+                    }}
                   />
                 </div>
               </>
@@ -370,8 +408,8 @@ export default function ManageBookings() {
 
           {/* Clear Filters Button */}
           {(filterVenue !== 'all' || filterDate !== '' || filterStatus !== 'all' || searchQuery !== '') && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => { setFilterVenue('all'); setFilterDate(''); setFilterStatus('all'); setSearchQuery(''); }}
               className="w-full sm:w-auto text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-bold px-3 h-10 shrink-0"
             >
@@ -384,18 +422,19 @@ export default function ManageBookings() {
 
       {/* Tab Filters (Categories) */}
       <div className="flex overflow-x-auto pb-2 mb-6 border-b border-slate-200 hide-scrollbar">
-        {(['action', 'partial', 'confirmed', 'vip', 'rejected', 'all'] as TabFilter[]).map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); setExpandedId(null); setRejectingId(null); }}
             className={`whitespace-nowrap px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-[#268053] text-[#268053]' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
               }`}
           >
-            {tab === 'action' ? 'Awaiting Action' :
-             tab === 'partial' ? '1st Round Paid' :
-             tab === 'confirmed' ? 'Fully Paid' :
-             tab === 'vip' ? 'VIP Approved' :
-             tab === 'rejected' ? 'Rejected' : 'All Bookings'}
+            {tab === 'action' ? 'Awaiting MoA Approval' :
+              tab === 'mgmt_approved' ? 'MoA Approved' :
+                tab === 'partial' ? '1st Round Paid' :
+                  tab === 'confirmed' ? 'Fully Paid' :
+                    tab === 'vip' ? 'VIP Approved' :
+                      tab === 'rejected' ? 'Rejected' : 'All Bookings'}
             <span className={`ml-2 py-0.5 px-2.5 rounded-full text-xs transition-colors ${activeTab === tab ? 'bg-[#268053] text-white' : 'bg-slate-100 text-slate-500'
               }`}>
               {counts[tab]}
@@ -407,11 +446,11 @@ export default function ManageBookings() {
       {/* Admin Booking List */}
       <div className="space-y-4">
         {paginatedBookings.length === 0 ? (
-           <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-16 text-center text-slate-500">
-              <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-4" />
-              <p className="font-bold">No bookings found.</p>
-              <p className="text-sm">Try clearing your search query or filters.</p>
-           </div>
+          <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-16 text-center text-slate-500">
+            <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+            <p className="font-bold">No bookings found.</p>
+            <p className="text-sm">Try clearing your search query or filters.</p>
+          </div>
         ) : paginatedBookings.map((b, i) => {
 
           const safeId = String(b.id);
@@ -427,10 +466,10 @@ export default function ManageBookings() {
 
           const startDate = b.start_date || b.startDate || '';
           const endDate = b.end_date || b.endDate || '';
-          
+
           const startTime = toEthTime(b.start_time || b.startTime);
           const endTime = toEthTime(b.end_time || b.endTime);
-          
+
           const attachment = b.letter_attachment || b.letterAttachment || b.attachment;
 
           const venueId = b.venue || b.venueId;
@@ -442,13 +481,13 @@ export default function ManageBookings() {
           const techIds = b.technical_services || b.technicalServices || [];
           const suppIds = b.support_services || b.supportServices || [];
           const allRequestedServices: { id: string, name: string, isUnavailable: boolean, type: 'tech' | 'supp' }[] = [];
-          
+
           techIds.forEach((id: any) => {
             const s = technicalServices.find(t => String(t.id) === String(id));
             if (s) {
-              allRequestedServices.push({ 
-                id: String(id), 
-                name: s.name, 
+              allRequestedServices.push({
+                id: String(id),
+                name: s.name,
                 isUnavailable: (b.unavailableTechnicalServices || []).includes(String(id)),
                 type: 'tech'
               });
@@ -457,9 +496,9 @@ export default function ManageBookings() {
           suppIds.forEach((id: any) => {
             const s = supportServices.find(t => String(t.id) === String(id));
             if (s) {
-              allRequestedServices.push({ 
-                id: String(id), 
-                name: s.name, 
+              allRequestedServices.push({
+                id: String(id),
+                name: s.name,
                 isUnavailable: (b.unavailableSupportServices || []).includes(String(id)),
                 type: 'supp'
               });
@@ -536,55 +575,94 @@ export default function ManageBookings() {
 
                   {/* Action buttons */}
                   <div className="flex flex-wrap items-center gap-2" onClick={e => e.stopPropagation()}>
-                    {/* Normal Users Payment Flow */}
-                    {statusLower === 'pending' && !isRejecting && !isVipBooking && (
+                    {/* MoA Leadership Approval Flow */}
+                    {statusLower === 'pending' && role === 'leadership' && !isRejecting && (
                       <>
-                        <Button 
+                        <Button
                           disabled={pendingActionId !== null}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
-                          onClick={(e) => handleStatusChange(safeId, 'partial_paid', e)}
+                          className="bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (confirm('Approve this booking at MoA Management level?')) {
+                              setPendingActionId(`${safeId}-approve_mgmt`);
+                              try {
+                                await approveManagement(safeId, true);
+                              } catch (err) { }
+                              setPendingActionId(null);
+                            }
+                          }}
                         >
-                          {pendingActionId === `${safeId}-partial_paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
-                          {pendingActionId === `${safeId}-partial_paid` ? 'Processing...' : 'Confirm 1st Round'}
+                          {pendingActionId === `${safeId}-approve_mgmt` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
+                          Approve MoA
                         </Button>
-                        <Button 
+                        <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm text-xs sm:text-sm font-bold h-9 sm:h-10 px-3 sm:px-4" onClick={(e) => handleInitReject(safeId, e)}>
+                          <XCircle className="w-4 h-4 mr-1.5" /> Reject Request
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Pending booking but not leadership - block action buttons */}
+                    {statusLower === 'pending' && role !== 'leadership' && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" /> Awaiting MoA Management Approval
+                      </span>
+                    )}
+
+                    {/* MoA Management Approved Flow (Ready for Event Management to process payment/VIP) */}
+                    {statusLower === 'management_approved' && role !== 'leadership' && !isRejecting && (
+                      <>
+                        {isVipBooking ? (
+                          <Button
+                            disabled={pendingActionId !== null}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10"
+                            onClick={(e) => handleStatusChange(safeId, 'approved', e)}
+                          >
+                            <Star className="w-3.5 h-3.5 mr-1.5" /> Apply VIP Override
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              disabled={pendingActionId !== null}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
+                              onClick={(e) => handleStatusChange(safeId, 'partial_paid', e)}
+                            >
+                              {pendingActionId === `${safeId}-partial_paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
+                              {pendingActionId === `${safeId}-partial_paid` ? 'Processing...' : 'Confirm 1st Round'}
+                            </Button>
+                            <Button
+                              disabled={pendingActionId !== null}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
+                              onClick={(e) => handleStatusChange(safeId, 'paid', e)}
+                            >
+                              {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
+                              {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
+                            </Button>
+                          </>
+                        )}
+                        <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+
+                    {statusLower === 'partial_paid' && role !== 'leadership' && !isRejecting && (
+                      <>
+                        <Button
                           disabled={pendingActionId !== null}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4"
                           onClick={(e) => handleStatusChange(safeId, 'paid', e)}
                         >
                           {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
                           {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
                         </Button>
+                        <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
+                          <XCircle className="w-4 h-4" />
+                        </Button>
                       </>
                     )}
 
-                    {statusLower === 'partial_paid' && !isRejecting && (
-                      <Button 
-                        disabled={pendingActionId !== null}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4" 
-                        onClick={(e) => handleStatusChange(safeId, 'paid', e)}
-                      >
-                        {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
-                        {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
-                      </Button>
-                    )}
-
-                    {/* VIP Users Approval Flow */}
-                    {statusLower === 'pending' && !isRejecting && isVipBooking && (
-                      <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10" onClick={(e) => handleStatusChange(safeId, 'approved', e)}>
-                        <Star className="w-3.5 h-3.5 mr-1.5" /> Approve VIP
-                      </Button>
-                    )}
-
-                    {/* Reject button */}
-                    {['pending', 'partial_paid'].includes(statusLower) && !isRejecting && (
-                      <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
-                        <XCircle className="w-4 h-4" />
-                      </Button>
-                    )}
-
                     {/* Completion from paid or VIP approved */}
-                    {['paid', 'approved'].includes(statusLower) && (
+                    {['paid', 'approved'].includes(statusLower) && role !== 'leadership' && (
                       <Button variant="outline" className="text-slate-700 border-slate-300 font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3" onClick={(e) => handleStatusChange(safeId, 'completed', e)}>
                         Mark Completed
                       </Button>
@@ -600,12 +678,49 @@ export default function ManageBookings() {
                 <div className="border-t-2 border-slate-100 bg-white p-4 sm:p-8 cursor-default animate-in fade-in slide-in-from-top-4 duration-300" onClick={(e) => e.stopPropagation()}>
 
                   {isRejecting && (
-                    <div className="mb-6 sm:mb-8 bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 shadow-sm">
-                      <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2 text-sm"><XCircle className="w-4 h-4" /> Reason for Cancellation/Rejection</h4>
-                      <textarea autoFocus value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="w-full text-sm border border-red-200 rounded-lg p-4 shadow-inner resize-none focus:outline-none focus:ring-2 focus:ring-red-500" rows={3} placeholder="Please provide the exact reason why this is rejected. The user will see this." />
+                    <div className={`mb-6 sm:mb-8 rounded-xl p-4 sm:p-6 shadow-sm border ${statusLower === 'pending' && role === 'leadership' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                      <h4 className={`font-bold mb-1 flex items-center gap-2 text-sm ${statusLower === 'pending' && role === 'leadership' ? 'text-amber-900' : 'text-red-900'}`}>
+                        {statusLower === 'pending' && role === 'leadership' ? (
+                          <><Crown className="w-4 h-4 text-amber-600" /> Ministry Leadership — Reject Booking</>
+                        ) : (
+                          <><XCircle className="w-4 h-4" /> Reason for Cancellation/Rejection</>
+                        )}
+                      </h4>
+                      {statusLower === 'pending' && role === 'leadership' && (
+                        <p className="text-xs text-amber-700 font-medium mb-3">This message will be sent to the event organizer as the official rejection reason from MoA Management.</p>
+                      )}
+                      <textarea
+                        autoFocus
+                        disabled={pendingActionId !== null}
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                        className={`w-full text-sm border rounded-lg p-4 shadow-inner resize-none focus:outline-none focus:ring-2 ${statusLower === 'pending' && role === 'leadership' ? 'border-amber-200 focus:ring-amber-500' : 'border-red-200 focus:ring-red-500'} disabled:opacity-50`}
+                        rows={4}
+                        placeholder={statusLower === 'pending' && role === 'leadership'
+                          ? 'Provide the official reason for rejecting this request at MoA Management level...'
+                          : 'Please provide the exact reason why this is rejected. The user will see this.'}
+                      />
                       <div className="flex justify-end gap-3 mt-4">
-                        <Button variant="ghost" onClick={(e) => { e.stopPropagation(); setRejectingId(null); }}>Cancel</Button>
-                        <Button variant="destructive" onClick={(e) => handleConfirmReject(safeId, e)}>Confirm Rejection</Button>
+                        <Button 
+                          variant="ghost" 
+                          disabled={pendingActionId !== null}
+                          onClick={(e) => { e.stopPropagation(); setRejectingId(null); }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          disabled={pendingActionId !== null}
+                          className={statusLower === 'pending' && role === 'leadership' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                          onClick={(e) => handleConfirmReject(safeId, e)}
+                        >
+                          {pendingActionId === `${safeId}-reject` ? (
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" />
+                          ) : null}
+                          {pendingActionId === `${safeId}-reject` 
+                            ? 'Rejecting...' 
+                            : (statusLower === 'pending' && role === 'leadership' ? 'Reject as MoA Leadership' : 'Confirm Rejection')}
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -618,13 +733,13 @@ export default function ManageBookings() {
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Organizer Details</p>
                         <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3">
                           <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b border-slate-200">
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ref ID</span>
-                             <span className="font-mono font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">MOA-BKG-{safeId}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ref ID</span>
+                            <span className="font-mono font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">MOA-BKG-{safeId}</span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b border-slate-200">
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</span>
-                             <span className="font-bold text-[#268053] flex items-center gap-1.5"><Clock size={12}/> {startTime} to {endTime} (Local)</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</span>
+                            <span className="font-bold text-[#268053] flex items-center gap-1.5"><Clock size={12} /> {startTime} to {endTime} (Local)</span>
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -680,17 +795,17 @@ export default function ManageBookings() {
                       {/* Display custom schedule array if it exists */}
                       {(b.daily_schedules || b.dailySchedules)?.length > 0 && (
                         <div>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Custom Schedule</p>
-                           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2 max-h-32 overflow-y-auto custom-scrollbar">
-                              {(b.daily_schedules || b.dailySchedules).map((ds: any, dIdx: number) => (
-                                 <div key={dIdx} className="flex justify-between items-center text-xs font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
-                                    <span className="text-slate-700">{toEthDateString(ds.date)}</span>
-                                    <span className="text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
-                                       {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)} (Local)`}
-                                    </span>
-                                 </div>
-                              ))}
-                           </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Custom Schedule</p>
+                          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2 max-h-32 overflow-y-auto custom-scrollbar">
+                            {(b.daily_schedules || b.dailySchedules).map((ds: any, dIdx: number) => (
+                              <div key={dIdx} className="flex justify-between items-center text-xs font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
+                                <span className="text-slate-700">{toEthDateString(ds.date)}</span>
+                                <span className="text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
+                                  {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)} (Local)`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -728,10 +843,10 @@ export default function ManageBookings() {
                           <div className="flex justify-between text-xs font-medium text-emerald-100">
                             <span>Payment Status:</span>
                             <span className="font-bold">
-                              {statusLower === 'paid' ? 'FULLY PAID' : 
-                               statusLower === 'partial_paid' ? '1ST ROUND PAID' :
-                               statusLower === 'approved' ? 'VIP (WAIVED)' : 
-                               'PENDING'}
+                              {statusLower === 'paid' ? 'FULLY PAID' :
+                                statusLower === 'partial_paid' ? '1ST ROUND PAID' :
+                                  statusLower === 'approved' ? 'VIP (WAIVED)' :
+                                    'PENDING'}
                             </span>
                           </div>
                         </div>
@@ -786,8 +901,8 @@ export default function ManageBookings() {
                   size="sm"
                   onClick={() => setCurrentPage(i + 1)}
                   className={`rounded-lg h-9 w-9 p-0 font-bold text-xs transition-all ${currentPage === i + 1
-                      ? "bg-[#268053] text-white hover:bg-[#1b5e3a] border-transparent shadow-lg"
-                      : "border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    ? "bg-[#268053] text-white hover:bg-[#1b5e3a] border-transparent shadow-lg"
+                    : "border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                     }`}
                 >
                   {i + 1}

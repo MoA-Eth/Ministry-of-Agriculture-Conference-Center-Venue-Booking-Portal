@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser } from './types';
 import { toast } from 'sonner';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'https://cms.moa.gov.et/api';
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'https://cms.moa.gov.et';
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+export const API_BASE = import.meta.env.VITE_API_BASE || (isLocal ? 'http://localhost:8000/api' : 'https://cms.moa.gov.et/api');
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || (isLocal ? 'http://localhost:8000' : 'https://cms.moa.gov.et');
 
 interface AppContextType {
   role: UserRole;
@@ -20,6 +21,7 @@ interface AppContextType {
   servicePrices: Record<string, number>;
   addBooking: (booking: any) => Promise<any>;
   updateBookingStatus: (id: string, status: Booking['status'], reason?: string) => Promise<void>;
+  approveManagement: (id: string, approve: boolean, reason?: string) => Promise<void>;
   cancelBooking: (id: string) => Promise<void>;
   addService: (type: 'technical' | 'support', name: string, price: number) => Promise<void>;
   removeService: (type: 'technical' | 'support', id: string) => Promise<void>;
@@ -68,6 +70,8 @@ export const mapBooking = (b: any): Booking => ({
   venueDailyRate: Number(b.venue_daily_rate || 0),
   serviceFees: Number(b.service_fees || 0),
   totalPrice: Number(b.total_price || 0),
+  managementApprovedBy: b.management_approved_by_name || null,
+  managementApprovedAt: b.management_approved_at || null,
 });
 
 const mapVenue = (v: any): Venue => ({
@@ -251,7 +255,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sData = await responses[3].json();
         const aData = currentToken ? await responses[4].json() : [];
 
-        const rawBookings = (bData.results || bData || []).map(mapBooking);
+        const safeArray = (data: any) => Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
+        
+        const rawBookings = safeArray(bData).map(mapBooking);
 
         // PRIVACY SHIELD
         const securedBookings = rawBookings.map((b: Booking) => {
@@ -281,12 +287,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
 
         setBookings(securedBookings);
-        setVenues((vData.results || vData || []).map(mapVenue));
+        setVenues(safeArray(vData).map(mapVenue));
 
         // Set the services globally so the form can instantly read them!
-        setTechnicalServices((tData.results || tData || []).map(mapService));
-        setSupportServices((sData.results || sData || []).map(mapService));
-        if (currentToken) setAuditLogs(aData.results || aData || []);
+        setTechnicalServices(safeArray(tData).map(mapService));
+        setSupportServices(safeArray(sData).map(mapService));
+        if (currentToken) {
+          setAuditLogs(safeArray(aData));
+        }
 
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -323,7 +331,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (form.dailySchedules?.length > 0) {
         const first = form.dailySchedules[0];
-        formData.append('start_time', first.allDay ? '00:00' : (first.startTime || '08:00'));
+        formData.append('start_time', first.allDay ? '00:00' : (first.startTime || '09:00'));
         const last = form.dailySchedules[form.dailySchedules.length - 1];
         formData.append('end_time', last.allDay ? '23:59' : (last.endTime || '17:00'));
       }
@@ -406,6 +414,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error("Update failed:", error);
       toast.error(error.message || 'Update failed');
+      throw error;
+    }
+  }, [refreshData, getHeaders]);
+
+  const approveManagement = useCallback(async (id: string, approve: boolean, reason?: string) => {
+    try {
+      const endpoint = approve ? 'approve_management' : 'reject_management';
+      const bodyObj = approve ? {} : { rejection_reason: reason };
+      const res = await fetch(`${API_BASE}/bookings/${id}/${endpoint}/`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify(bodyObj),
+      });
+
+      let responseData: any = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server error: ${res.status} ${res.statusText}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(responseData.error || responseData.detail || responseData.rejection_reason || 'Action failed');
+      }
+
+      toast.success(approve ? 'Booking approved by MoA Management' : 'Booking rejected by MoA Management');
+      refreshData();
+    } catch (error: any) {
+      console.error("Management approval failed:", error);
+      toast.error(error.message || 'Action failed');
       throw error;
     }
   }, [refreshData, getHeaders]);
@@ -550,6 +590,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       role, setRole, token, user, login, register, logout, bookings, venues, addBooking, updateBookingStatus, cancelBooking,
+      approveManagement,
       technicalServices, supportServices, servicePrices,
       addService, removeService, updateServicePrice,
       acknowledgeTechnicalTask, toggleTechnicalServiceAvailability, acknowledgeCateringTask, toggleSupportServiceAvailability,

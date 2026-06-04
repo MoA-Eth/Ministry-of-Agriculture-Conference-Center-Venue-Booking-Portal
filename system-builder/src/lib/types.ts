@@ -9,7 +9,7 @@ export interface SystemUser {
   created_at?: string;
 }
 
-export type BookingStatus = 'reserved' | 'confirmed' | 'rejected' | 'cancelled' | 'completed';
+export type BookingStatus = 'pending' | 'management_approved' | 'partial_paid' | 'paid' | 'approved' | 'rejected' | 'cancelled' | 'completed' | 'reserved' | 'confirmed';
 
 export type VenueType = 'Cinema' | 'Theatre/Auditorium' | 'Meeting' | 'Boardroom' | 'Lounge' | 'Refreshment';
 
@@ -75,6 +75,8 @@ export interface Booking {
   serviceFees?: number;
   totalPrice?: number;
   createdAt: string;
+  managementApprovedBy?: string | null;
+  managementApprovedAt?: string | null;
   
   // Backend & Legacy Aliases
   user?: any;

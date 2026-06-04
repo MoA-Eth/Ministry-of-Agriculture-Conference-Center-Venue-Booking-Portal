@@ -367,9 +367,13 @@ export default function LandingPage() {
       }
     }
 
-    return entries.sort((a, b) =>
-      a.startDate.localeCompare(b.startDate) || a.startTime.localeCompare(b.startTime)
-    );
+    return entries.sort((a, b) => {
+      const aDate = a.startDate || '';
+      const bDate = b.startDate || '';
+      const aTime = a.startTime || a.dailySchedules?.[0]?.startTime || '';
+      const bTime = b.startTime || b.dailySchedules?.[0]?.startTime || '';
+      return aDate.localeCompare(bDate) || aTime.localeCompare(bTime);
+    });
   };
 
   const [isScrolled, setIsScrolled] = useState(false);

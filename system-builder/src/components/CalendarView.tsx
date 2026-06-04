@@ -26,6 +26,7 @@ const getEthDateString = (gregStr: string) => {
 
 const adminStatusConfig = {
   pending: { label: 'Pending Action', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', borderLeft: 'border-l-amber-500', icon: <Clock3 size={12} className="shrink-0 text-amber-600" /> },
+  management_approved: { label: 'MoA Approved', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', borderLeft: 'border-l-teal-500', icon: <CheckCircle2 size={12} className="shrink-0 text-teal-600" /> },
   partial_paid: { label: '1st Round Paid', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', borderLeft: 'border-l-blue-500', icon: <Clock size={12} className="shrink-0 text-blue-600" /> },
   paid: { label: 'Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', borderLeft: 'border-l-[#268053]', icon: <CheckCircle2 size={12} className="shrink-0 text-emerald-600" /> },
   approved: { label: 'VIP Override', color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', borderLeft: 'border-l-purple-500', icon: <Star size={12} className="shrink-0 text-purple-600" /> },
@@ -46,7 +47,7 @@ const getStatusProps = (status: string, isAdmin: boolean) => {
     return adminStatusConfig[s as keyof typeof adminStatusConfig] || adminStatusConfig.pending;
   } else {
     if (['paid', 'approved', 'completed'].includes(s)) return userStatusConfig.confirmed;
-    if (['pending', 'partial_paid'].includes(s)) return userStatusConfig.tentative;
+    if (['pending', 'management_approved', 'partial_paid'].includes(s)) return userStatusConfig.tentative;
     return userStatusConfig.cancelled;
   }
 };
@@ -217,7 +218,7 @@ export default function CalendarView() {
   const [selectedVenue, setSelectedVenue] = useState<string>('all');
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   
-  const isAdmin = ['system_admin', 'event_management', 'leadership'].includes(role || '');
+  const isAdmin = ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
 
   const today = EthDateTime.now();
   const [view, setView] = useState({ year: today.year, month: today.month });
@@ -259,10 +260,11 @@ export default function CalendarView() {
           
           {/* UPDATED: Dynamic Legend based on Role */}
           {isAdmin ? (
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
               <span className="flex items-center gap-1.5 text-amber-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500" /> Pending</span>
-              <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> 1st Round</span>
-              <span className="flex items-center gap-1.5 text-emerald-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#268053]" /> Paid</span>
+              <span className="flex items-center gap-1.5 text-teal-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-teal-500" /> MoA Approved</span>
+              <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> 1st Round Paid</span>
+              <span className="flex items-center gap-1.5 text-emerald-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#268053]" /> Fully Paid</span>
               <span className="flex items-center gap-1.5 text-purple-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-purple-500" /> VIP</span>
             </div>
           ) : (
@@ -333,8 +335,8 @@ export default function CalendarView() {
                  const dayBookings = bookings.filter(b => {
                     let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
                     if (b.dailySchedules?.length) matchesDate = b.dailySchedules.some(s => s.date === dateStr);
-                    const matchVenue = selectedVenue === 'all' || b.venueId.toString() === selectedVenue;
-                    const validStatus = ['pending', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status);
+                    const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
+                    const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status);
                     return matchesDate && matchVenue && validStatus;
                  });
 

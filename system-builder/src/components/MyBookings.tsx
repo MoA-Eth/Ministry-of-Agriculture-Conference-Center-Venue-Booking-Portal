@@ -8,9 +8,13 @@ import { Calendar, Users, MapPin, Edit, Trash2, Lock, XCircle, CheckCircle2 } fr
 import { EthDateTime } from 'ethiopian-calendar-date-converter';
 
 const statusStyles: Record<string, { bg: string, text: string, label: string, dot: string }> = {
-  reserved: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending Review', dot: 'bg-amber-500' },
-  approved: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Awaiting Payment', dot: 'bg-blue-500' },
+  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Awaiting MoA Approval', dot: 'bg-amber-500' },
+  reserved: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Awaiting MoA Approval', dot: 'bg-amber-500' },
+  management_approved: { bg: 'bg-teal-50', text: 'text-teal-700', label: 'MoA Approved (Awaiting Payment)', dot: 'bg-teal-500' },
+  partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: '1st Round Paid', dot: 'bg-blue-500' },
+  approved: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'VIP Approved', dot: 'bg-purple-500' },
   confirmed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Confirmed', dot: 'bg-emerald-500' },
+  paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Fully Paid', dot: 'bg-emerald-500' },
   override: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'VIP Override', dot: 'bg-purple-500' },
   rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected', dot: 'bg-red-500' },
   cancelled: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Cancelled', dot: 'bg-slate-400' },
@@ -130,7 +134,7 @@ export default function MyBookings() {
             const endDate = b.endDate || b.end_date || '';
             const startTime = b.startTime || b.start_time || '';
             const pax = b.participantCount || b.participant_count || b.pax;
-            const isLocked = isWithin24Hours(startDate, startTime) && ['confirmed', 'approved', 'reserved'].includes(b.status);
+            const isLocked = isWithin24Hours(startDate, startTime) && ['pending', 'management_approved', 'partial_paid', 'approved', 'confirmed', 'paid'].includes(b.status);
 
             return (
               <div key={safeId} className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all rounded-2xl p-6">
@@ -156,13 +160,13 @@ export default function MyBookings() {
                     {b.status === 'confirmed' && (<p className="text-sm font-bold text-emerald-600 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Payment Verified. Venue Secured.</p>)}
                   </div>
 
-                  {['reserved', 'approved', 'confirmed'].includes(b.status) && (
+                  {['pending', 'management_approved', 'partial_paid', 'approved', 'confirmed', 'paid'].includes(b.status) && (
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
                       {isLocked ? (
                          <div className="flex items-center gap-2 text-amber-700 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200"><Lock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Locked (Under 24h)</span></div>
                       ) : (
                         <>
-                          {b.status === 'reserved' && (
+                          {['pending', 'reserved'].includes(b.status) && (
                             <Button variant="outline" className="w-full sm:w-auto font-bold border-slate-300" onClick={() => handleOpenEdit(b)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
                           )}
                           <Button variant="ghost" className="w-full sm:w-auto font-bold text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(safeId)}><Trash2 className="w-4 h-4 mr-2" /> Cancel</Button>

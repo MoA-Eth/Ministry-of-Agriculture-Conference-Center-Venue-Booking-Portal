@@ -93,12 +93,12 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     
     const vBookings = bookings?.filter(b => 
       b.venueId?.toString() === form.venueId?.toString() && 
-      ['pending', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '')
+      ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '')
     );
     
     const schedules: { date: string, start: string, end: string, isHard: boolean }[] = [];
     vBookings?.forEach(b => {
-      const isHard = ['paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '');
+      const isHard = ['partial_paid', 'paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '');
       
       if (b.dailySchedules && b.dailySchedules.length > 0) {
         b.dailySchedules.forEach((ds: any) => schedules.push({ date: ds.date, start: ds.startTime, end: ds.endTime, isHard }));
@@ -123,8 +123,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     form.dailySchedules?.forEach(newSched => {
       const dayExisting = existingSchedules.filter(ex => ex.date === newSched.date);
       
-      const nStart = timeToMinutes(newSched.startTime || '01:00');
-      const nEnd = timeToMinutes(newSched.endTime || '12:00');
+      const nStart = timeToMinutes(newSched.startTime || '09:00');
+      const nEnd = timeToMinutes(newSched.endTime || '17:00');
       
       let hasHard = false;
       let hasSoft = false;
@@ -169,7 +169,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       }
       setForm(prev => ({
         ...prev,
-        dailySchedules: dates.map(d => prev.dailySchedules?.find(s => s.date === d) || { date: d, startTime: '01:00', endTime: '12:00', allDay: false })
+        dailySchedules: dates.map(d => prev.dailySchedules?.find(s => s.date === d) || { date: d, startTime: '09:00', endTime: '17:00', allDay: false })
       }));
     }
   }, [form.startDate, form.endDate]);
@@ -224,8 +224,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     return Object.keys(errs).length === 0;
   };
 
-  const generateHourOptions = () => Array.from({ length: 13 }, (_, i) => {
-    const hour = i + 6;
+  const generateHourOptions = () => Array.from({ length: 9 }, (_, i) => {
+    const hour = i + 9;
     const h = hour.toString().padStart(2, '0') + ':00'; 
     return <option key={h} value={h}>{toEthTime(h)}</option>;
   });

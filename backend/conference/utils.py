@@ -21,6 +21,7 @@ def send_automated_email(booking, trigger_type):
             '{date}': booking.start_date.strftime('%B %d, %Y'),
             '{ref}': f"MOA-BKG-{booking.id}",
             '{status}': booking.get_status_display(),
+            '{reason}': booking.rejection_reason or 'No specific reason provided.',
         }
 
         # 3. Swap placeholders in subject and body
@@ -63,19 +64,23 @@ def _build_html_email(subject, body_text, booking, trigger_type):
 
     # Updated Color Palette for new statuses
     colors = {
-        'pending': '#f59e0b',      # Amber
-        'partial_paid': '#3b82f6', # Blue
-        'paid': '#10b981',         # Emerald
-        'approved': '#8b5cf6',      # Purple
-        'rejected': '#ef4444',     # Red
-        'cancelled': '#64748b',    # Slate
-        'completed': '#1e293b',    # Dark Slate
+        'pending': '#f59e0b',               # Amber
+        'management_approved': '#0d9488',   # Teal
+        'management_rejected': '#b45309',   # Amber-Red (Dark Amber)
+        'partial_paid': '#3b82f6',          # Blue
+        'paid': '#10b981',                  # Emerald
+        'approved': '#8b5cf6',              # Purple
+        'rejected': '#ef4444',              # Red
+        'cancelled': '#64748b',             # Slate
+        'completed': '#1e293b',             # Dark Slate
     }
     accent = colors.get(trigger_type, '#268053')
 
     # Updated Status Labels
     labels = {
         'pending': 'Request Received',
+        'management_approved': 'Ministry Approved',
+        'management_rejected': 'Ministry Rejected',
         'partial_paid': 'First Payment Confirmed',
         'paid': 'Fully Confirmed',
         'approved': 'VIP Priority Approved',

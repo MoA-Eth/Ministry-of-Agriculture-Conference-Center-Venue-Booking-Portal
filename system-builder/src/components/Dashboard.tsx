@@ -55,6 +55,8 @@ const ETH_MONTHS_SHORT = ETH_MONTHS.map(m => m.substring(0, 3));
 
 const COLORS = ['#268053', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
 const STATUS_COLORS: Record<string, string> = {
+  pending: '#f59e0b',      // Amber
+  management_approved: '#14b8a6', // Teal
   approved: '#3b82f6',     // Blue (Awaiting Payment)
   confirmed: '#059669',    // Emerald (Paid)
   paid: '#059669',         // Emerald (Paid)
@@ -80,7 +82,9 @@ const getEthDateString = (gregStr: string) => {
 
 function StatusBadge({ status }: { status: BookingStatus }) {
   const configs: Record<string, { color: string, bg: string, border: string, icon: any, label: string }> = {
+    pending: { label: 'Awaiting MoA Approval', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: <Clock3 size={14} /> },
     reserved: { label: 'Pending Approval', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: <Clock3 size={14} /> },
+    management_approved: { label: 'MoA Approved', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', icon: <CheckCircle2 size={14} /> },
     approved: { label: 'Awaiting Payment', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: <Clock size={14} /> },
     paid: { label: 'Fully Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={14} /> },
     confirmed: { label: 'Confirmed', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={14} /> },
@@ -461,7 +465,13 @@ export default function Dashboard() {
     const activeStatuses = ['confirmed', 'reserved', 'paid', 'partial_paid', 'approved', 'override'];
     return bookings.filter(b => {
       return b.startDate >= todayStr && b.startDate <= sevenDaysOut && activeStatuses.includes(b.status);
-    }).sort((a, b) => a.startDate.localeCompare(b.startDate) || a.startTime.localeCompare(b.startTime));
+    }).sort((a, b) => {
+      const aDate = a.startDate || '';
+      const bDate = b.startDate || '';
+      const aTime = a.startTime || a.dailySchedules?.[0]?.startTime || '';
+      const bTime = b.startTime || b.dailySchedules?.[0]?.startTime || '';
+      return aDate.localeCompare(bDate) || aTime.localeCompare(bTime);
+    });
   }, [bookings, todayStr]);
 
   // Pagination for Priority Events

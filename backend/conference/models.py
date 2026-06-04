@@ -102,6 +102,7 @@ class SupportService(models.Model):
 
 class BookingStatus(models.TextChoices):
     PENDING = 'pending', 'Pending / Awaiting Action'
+    MANAGEMENT_APPROVED = 'management_approved', 'Approved by MoA Management'
     PARTIAL_PAID = 'partial_paid', '1st Round Paid'
     PAID = 'paid', 'Fully Paid'
     APPROVED = 'approved', 'VIP Approved'
@@ -180,6 +181,16 @@ class Booking(models.Model):
     reminder_sent = models.BooleanField(default=False)
     expiration_reminder_sent = models.BooleanField(default=False)
 
+    # MoA Management Approval fields
+    management_approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='management_approved_bookings'
+    )
+    management_approved_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-created_at']
 
@@ -240,6 +251,8 @@ class MaintenanceUpdate(models.Model):
 class EmailTemplate(models.Model):
     TRIGGER_CHOICES = [
         ('pending', 'Booking Received (Pending)'),
+        ('management_approved', 'Approved by MoA Management'),
+        ('management_rejected', 'Rejected by MoA Management'),
         ('partial_paid', '1st Round Payment Confirmed'),
         ('paid', 'Full Payment Confirmed'),
         ('approved', 'VIP Override Approved'),
