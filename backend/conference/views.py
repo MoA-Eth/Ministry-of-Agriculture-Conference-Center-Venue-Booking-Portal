@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -373,7 +373,69 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         as_guest = self.request.data.get('as_guest', 'false').lower() == 'true'
-        
+
+        # ── Load live business rules ────────────────────────────────────────
+        rules = SystemSettings.load()
+
+        # ── Rule 1: Waiting Period ──────────────────────────────────────────
+        # Staff / admin roles (event_management, leadership, system_admin,
+        # admin_finance) are exempt from the advance-notice restriction so
+        # they can create urgent internal bookings.
+        start_date_str = serializer.validated_data.get('start_date')
+        if start_date_str and rules.waiting_period_hours > 0:
+            role = get_role(user) if (user and user.is_authenticated) else 'organizer'
+            if role == 'organizer':
+                start_dt = datetime.combine(start_date_str, time.min).replace(
+                    tzinfo=timezone.get_current_timezone()
+                )
+                min_allowed = timezone.now() + timedelta(hours=rules.waiting_period_hours)
+                if start_dt < min_allowed:
+                    raise ValidationError(
+                        f"Bookings must be made at least {rules.waiting_period_hours} hour(s) in advance. "
+                        f"Please choose a date after {min_allowed.strftime('%Y-%m-%d %H:%M')}."
+                    )
+
+        # ── Rule 2: Buffer Time ─────────────────────────────────────────────
+        venue = serializer.validated_data.get('venue')
+        req_start_date = serializer.validated_data.get('start_date')
+        req_end_date   = serializer.validated_data.get('end_date')
+        req_start_time = serializer.validated_data.get('start_time')
+        req_end_time   = serializer.validated_data.get('end_time')
+
+        if venue and req_start_date and req_end_date and rules.buffer_time_minutes > 0:
+            buf = timedelta(minutes=rules.buffer_time_minutes)
+            # Expand the requested window by the buffer on both sides
+            buf_start_date = req_start_date
+            buf_end_date   = req_end_date
+
+            neighbors = Booking.objects.filter(
+                venue=venue,
+                status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'],
+                start_date__lte=buf_end_date,
+                end_date__gte=buf_start_date,
+            )
+
+            for neighbor in neighbors:
+                if req_start_time and req_end_time and neighbor.start_time and neighbor.end_time:
+                    # Time-precise check: expand by buffer
+                    req_start_dt  = datetime.combine(req_start_date, req_start_time)
+                    req_end_dt    = datetime.combine(req_end_date,   req_end_time)
+                    n_start_dt    = datetime.combine(neighbor.start_date, neighbor.start_time)
+                    n_end_dt      = datetime.combine(neighbor.end_date,   neighbor.end_time)
+                    if (req_start_dt - buf) < n_end_dt and req_end_dt > (n_start_dt - buf):
+                        raise ValidationError(
+                            f"This venue requires a {rules.buffer_time_minutes}-minute buffer between events. "
+                            f"Another booking exists from {neighbor.start_date} {neighbor.start_time} "
+                            f"to {neighbor.end_date} {neighbor.end_time}."
+                        )
+                else:
+                    # Date-only check
+                    if req_start_date <= neighbor.end_date and req_end_date >= neighbor.start_date:
+                        raise ValidationError(
+                            f"This venue requires at least a {rules.buffer_time_minutes}-minute buffer between events. "
+                            f"Another booking already occupies an overlapping date range."
+                        )
+
         if user and user.is_authenticated:
             role = get_role(user)
             if role not in ('organizer', 'event_management', 'leadership', 'system_admin', 'admin_finance'):
@@ -587,8 +649,33 @@ class BookingViewSet(viewsets.ModelViewSet):
         if role == 'organizer' and booking.user != request.user:
             raise PermissionDenied('You can only cancel your own bookings.')
 
-        if booking.status not in ('pending', 'partial_paid', 'paid', 'approved'):
+        if booking.status not in ('pending', 'management_approved', 'partial_paid', 'paid', 'approved'):
             return Response({'error': 'Only active bookings can be cancelled.'}, status=400)
+
+        # ── Rule 3: Cancellation Policy (only enforced for organizers) ──────
+        if role == 'organizer':
+            rules = SystemSettings.load()
+            now = timezone.now()
+            event_start = datetime.combine(booking.start_date, booking.start_time or time.min)
+            event_start = timezone.make_aware(event_start) if timezone.is_naive(event_start) else event_start
+            hours_until_event = (event_start - now).total_seconds() / 3600
+
+            if rules.cancellation_policy == 'strict' and hours_until_event < 168:  # 7 days
+                return Response(
+                    {'error': 'Strict cancellation policy: Cancellations are not allowed within 7 days of the event.'},
+                    status=400
+                )
+            elif rules.cancellation_policy == 'moderate' and hours_until_event < 48:
+                return Response(
+                    {'error': 'Moderate cancellation policy: Cancellations are not allowed within 48 hours of the event.'},
+                    status=400
+                )
+            # 'flexible' policy: cancellation allowed up to 24 hours before
+            elif rules.cancellation_policy == 'flexible' and hours_until_event < 24:
+                return Response(
+                    {'error': 'Flexible cancellation policy: Cancellations are not allowed within 24 hours of the event.'},
+                    status=400
+                )
 
         booking.status = 'cancelled'
         booking.save()
@@ -612,9 +699,32 @@ class BookingViewSet(viewsets.ModelViewSet):
             ref_id = str(ref_id).replace('MOA-BKG-', '')
         try:
             booking = Booking.objects.get(id=ref_id)
-            if booking.status not in ('pending', 'partial_paid', 'paid', 'approved'):
+            if booking.status not in ('pending', 'management_approved', 'partial_paid', 'paid', 'approved'):
                 return Response({'error': 'Only active bookings can be cancelled.'}, status=400)
-            
+
+            # ── Rule 3: Cancellation Policy ─────────────────────────────────
+            rules = SystemSettings.load()
+            now = timezone.now()
+            event_start = datetime.combine(booking.start_date, booking.start_time or time.min)
+            event_start = timezone.make_aware(event_start) if timezone.is_naive(event_start) else event_start
+            hours_until_event = (event_start - now).total_seconds() / 3600
+
+            if rules.cancellation_policy == 'strict' and hours_until_event < 168:
+                return Response(
+                    {'error': 'Strict cancellation policy: Cancellations are not allowed within 7 days of the event.'},
+                    status=400
+                )
+            elif rules.cancellation_policy == 'moderate' and hours_until_event < 48:
+                return Response(
+                    {'error': 'Moderate cancellation policy: Cancellations are not allowed within 48 hours of the event.'},
+                    status=400
+                )
+            elif rules.cancellation_policy == 'flexible' and hours_until_event < 24:
+                return Response(
+                    {'error': 'Flexible cancellation policy: Cancellations are not allowed within 24 hours of the event.'},
+                    status=400
+                )
+
             booking.status = 'cancelled'
             booking.save()
             return Response(BookingSerializer(booking, context={'request': request}).data)

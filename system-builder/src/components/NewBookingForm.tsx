@@ -61,6 +61,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   }, [user]);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- VIP ROOM SECURITY FILTER ---
@@ -156,6 +157,69 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     return issues;
   }, [form.dailySchedules, existingSchedules]);
 
+  const getAvailableSlots = (dateStr: string) => {
+    const dayExisting = existingSchedules.filter(ex => ex.date === dateStr);
+    if (dayExisting.length === 0) {
+      return [{ start: '09:00', end: '17:00' }];
+    }
+
+    const DAY_START = 540; // 09:00
+    const DAY_END = 1020;  // 17:00
+
+    const blockedIntervals: { start: number, end: number }[] = [];
+    dayExisting.forEach(ex => {
+      const eStart = timeToMinutes(ex.start);
+      const eEnd = timeToMinutes(ex.end);
+      blockedIntervals.push({
+        start: eStart - 60,
+        end: eEnd + 60
+      });
+    });
+
+    blockedIntervals.sort((a, b) => a.start - b.start);
+
+    const mergedBlocks: { start: number, end: number }[] = [];
+    blockedIntervals.forEach(curr => {
+      if (mergedBlocks.length === 0) {
+        mergedBlocks.push({ ...curr });
+      } else {
+        const last = mergedBlocks[mergedBlocks.length - 1];
+        if (curr.start <= last.end) {
+          last.end = Math.max(last.end, curr.end);
+        } else {
+          mergedBlocks.push({ ...curr });
+        }
+      }
+    });
+
+    const available: { start: number, end: number }[] = [];
+    let currentStart = DAY_START;
+
+    mergedBlocks.forEach(block => {
+      if (block.start > currentStart) {
+        if (block.start - currentStart >= 60) {
+          available.push({ start: currentStart, end: Math.min(DAY_END, block.start) });
+        }
+      }
+      currentStart = Math.max(currentStart, block.end);
+    });
+
+    if (DAY_END - currentStart >= 60) {
+      available.push({ start: currentStart, end: DAY_END });
+    }
+
+    const minutesToTime = (mins: number) => {
+      const h = Math.floor(mins / 60).toString().padStart(2, '0');
+      const m = (mins % 60).toString().padStart(2, '0');
+      return `${h}:${m}`;
+    };
+
+    return available.map(slot => ({
+      start: minutesToTime(slot.start),
+      end: minutesToTime(slot.end)
+    }));
+  };
+
   useEffect(() => {
     if (form.startDate && form.endDate && form.endDate >= form.startDate) {
       const dates = [];
@@ -233,6 +297,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const finalTotal = venueTotal + serviceFee;
 
@@ -274,8 +339,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
       const data = await addBooking(payload);
       setSubmittedBookingId(data.id || 'SUCCESS');
-    } catch { 
-      toast.error('Submit failed. Please try again.'); 
+    } catch (err: any) {
+      const msg = err?.message || 'Submission failed. Please try again.';
+      setSubmitError(msg);
+      // Scroll to the top of the form so the error is visible
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -472,6 +540,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   <p className="text-xs font-medium text-black uppercase tracking-widest mb-2">Time Adjustments per Day</p>
                   {form.dailySchedules.map((s, idx) => {
                     const conflict = dailyConflicts.find(c => c.date === s.date);
+                    const dayExisting = existingSchedules.filter(ex => ex.date === s.date);
+                    const dayAvailable = getAvailableSlots(s.date);
                     return (
                       <div key={s.date} className={`flex flex-col border-2 p-3 sm:p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
                         {/* Date label */}
@@ -494,6 +564,47 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                             </div>
                           ) : (
                             <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">Full Day Locked</span>
+                          )}
+                        </div>
+
+                        {/* Available & Booked Slots row */}
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                          {dayExisting.length > 0 ? (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[9px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Booked Slots:</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {dayExisting.map((ex, bIdx) => (
+                                    <span key={bIdx} className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                      {toEthTime(ex.start)} - {toEthTime(ex.end)} ({ex.start} - {ex.end})
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Available Slots:</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {dayAvailable.length > 0 ? (
+                                    dayAvailable.map((slot, aIdx) => (
+                                      <span key={aIdx} className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                                        {toEthTime(slot.start)} - {toEthTime(slot.end)} ({slot.start} - {slot.end})
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[10px] font-black text-red-600 bg-red-100 px-2 py-0.5 rounded uppercase tracking-wider">
+                                      Fully Booked
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Available Slots:</span>
+                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                                All Day (3:00 Morning - 11:00 Afternoon / 09:00 - 17:00)
+                              </span>
+                            </div>
                           )}
                         </div>
 
@@ -687,20 +798,31 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 </div>
               </div>
               
-              <div className="mt-12 flex justify-between pt-6 border-t border-slate-100">
-                <button onClick={() => setCurrentStep(3)} className="font-black text-slate-400 hover:text-slate-600 uppercase text-xs tracking-widest transition-colors">Back</button>
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting}
-                  className="px-16 h-16 bg-gradient-to-r from-[#1b5e3a] to-[#268053] hover:from-[#15472c] hover:to-[#1b5e3a] text-white text-lg rounded-2xl font-black shadow-2xl shadow-emerald-900/30 uppercase tracking-widest transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 disabled:opacity-75 disabled:pointer-events-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:from-[#268053] disabled:to-[#268053]"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
-                      SUBMITTING...
-                    </span>
-                  ) : 'SUBMIT REQUEST'}
-                </Button>
+              <div className="mt-12 flex flex-col gap-4 pt-6 border-t border-slate-100">
+                {submitError && (
+                  <div className="flex items-start gap-3 bg-red-50 border-2 border-red-300 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-black text-red-700 uppercase tracking-wide mb-1">Booking Rejected</p>
+                      <p className="text-sm text-red-600 font-medium leading-relaxed">{submitError}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between w-full">
+                  <button onClick={() => setCurrentStep(3)} className="font-black text-slate-400 hover:text-slate-600 uppercase text-xs tracking-widest transition-colors">Back</button>
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting}
+                    className="px-16 h-16 bg-gradient-to-r from-[#1b5e3a] to-[#268053] hover:from-[#15472c] hover:to-[#1b5e3a] text-white text-lg rounded-2xl font-black shadow-2xl shadow-emerald-900/30 uppercase tracking-widest transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 disabled:opacity-75 disabled:pointer-events-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:from-[#268053] disabled:to-[#268053]"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-3">
+                        <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+                        SUBMITTING...
+                      </span>
+                    ) : 'SUBMIT REQUEST'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

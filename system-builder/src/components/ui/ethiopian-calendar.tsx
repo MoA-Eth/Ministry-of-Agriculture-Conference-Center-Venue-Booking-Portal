@@ -78,7 +78,6 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
   const isToday = (date: Date) => isSameDay(new Date(), date);
 
   const handleDateClick = (date: Date) => {
-    if (isBooked(date)) return; 
     if (!allowPast && isPast(date)) return;
 
     if (!selected?.from || (selected.from && selected.to)) {
@@ -115,7 +114,7 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
       let className = "h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all relative ";
 
       if (booked) {
-        className += "bg-red-50 text-red-300 cursor-not-allowed line-through decoration-red-300";
+        className += "bg-red-50 text-red-600 cursor-pointer border border-red-200 hover:bg-red-100";
       } else if (past && !allowPast) {
         className += "bg-slate-50 text-slate-300 cursor-not-allowed line-through opacity-60";
       } else if (selectedState) {
@@ -188,7 +187,7 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-100 ring-1 ring-emerald-500"></div> Today</div>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#268053]"></div> Selected</div>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-200"></div> Pending</div>
-        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-100"></div> Paid/VIP</div>
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></div> Booked (Click to check times)</div>
       </div>
     </div>
   );
