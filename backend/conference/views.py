@@ -351,9 +351,9 @@ class BookingViewSet(viewsets.ModelViewSet):
                 scheduled_q = Q(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'])
                 qs = qs.filter(Q(user=user) | scheduled_q).distinct()
             elif role == 'ict_admin':
-                qs = qs.filter(technical_services__isnull=False).distinct()
+                qs = qs.exclude(status__in=['pending', 'rejected', 'management_approved']).filter(technical_services__isnull=False).distinct()
             elif role == 'catering_support':
-                qs = qs.filter(support_services__isnull=False).distinct()
+                qs = qs.exclude(status__in=['pending', 'rejected', 'management_approved']).filter(support_services__isnull=False).distinct()
             else:
                 qs = qs.none()
         else:
@@ -465,6 +465,29 @@ class BookingViewSet(viewsets.ModelViewSet):
                 link='#/my-bookings'
             )
 
+        if new_status in ('partial_paid', 'paid'):
+            Notification.objects.create(
+                role_target='ict_admin',
+                title=f'Booking Payment Confirmed',
+                message=f"Payment for '{booking.event_title}' has been confirmed.",
+                type='success',
+                link='#/manage-bookings'
+            )
+            Notification.objects.create(
+                role_target='system_admin',
+                title=f'Booking Payment Confirmed',
+                message=f"Payment for '{booking.event_title}' has been confirmed.",
+                type='success',
+                link='#/manage-bookings'
+            )
+            Notification.objects.create(
+                role_target='event_management',
+                title=f'Booking Payment Confirmed',
+                message=f"Payment for '{booking.event_title}' has been confirmed.",
+                type='success',
+                link='#/manage-bookings'
+            )
+
         # Audit Log
         action_name = "Booking Override" if new_status == 'approved' else "Booking Status Change"
         log_action(
@@ -497,6 +520,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             type='success',
             link='#/manage-bookings'
         )
+
 
         # Notify organizer
         if booking.user:
