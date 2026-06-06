@@ -202,7 +202,11 @@ export default function VenuesPage() {
       payload.append('type', formData.type);
       payload.append('best_for', formData.best_for);
       if (formData.capacity) payload.append('capacity', formData.capacity);
-      if (formData.price) payload.append('price', formData.price);
+      if (formData.price) {
+        // Round to 2 decimal places to avoid floating-point precision errors
+        const roundedPrice = Math.round(parseFloat(formData.price) * 100) / 100;
+        payload.append('price', roundedPrice.toFixed(2));
+      }
       payload.append('included_services', JSON.stringify(formData.included_services));
       if (imageFile) payload.append('image', imageFile);
 
@@ -370,7 +374,7 @@ export default function VenuesPage() {
                           <label className="text-[10px] font-black text-[#5c8b74] uppercase tracking-widest ml-1">Daily Rate (ETB)</label>
                           <div className="relative">
                             <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" placeholder="0.00" />
+                            <input type="number" step="any" min="0" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" placeholder="0.00" />
                           </div>
                       </div>
 
