@@ -23,6 +23,7 @@ interface AppContextType {
   updateBookingStatus: (id: string, status: Booking['status'], reason?: string) => Promise<void>;
   approveManagement: (id: string, approve: boolean, reason?: string) => Promise<void>;
   cancelBooking: (id: string) => Promise<void>;
+  deleteBooking: (id: string) => Promise<void>;
   addService: (type: 'technical' | 'support', name: string, price: number) => Promise<void>;
   removeService: (type: 'technical' | 'support', id: string) => Promise<void>;
   updateServicePrice: (id: string, name: string, price: number, type: 'technical' | 'support') => Promise<void>;
@@ -462,6 +463,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshData, getHeaders]);
 
+  const deleteBooking = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${id}/`, { method: 'DELETE', headers: getHeaders() });
+      if (res.ok || res.status === 204) {
+        toast.success('Booking permanently deleted');
+        refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Delete failed');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete booking');
+      throw error;
+    }
+  }, [refreshData, getHeaders]);
+
   const addService = useCallback(async (type: 'technical' | 'support', name: string, price: number) => {
     const endpoint = type === 'technical' ? 'technical-services' : 'support-services';
     try {
@@ -589,7 +606,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      role, setRole, token, user, login, register, logout, bookings, venues, addBooking, updateBookingStatus, cancelBooking,
+      role, setRole, token, user, login, register, logout, bookings, venues, addBooking, updateBookingStatus, cancelBooking, deleteBooking,
       approveManagement,
       technicalServices, supportServices, servicePrices,
       addService, removeService, updateServicePrice,

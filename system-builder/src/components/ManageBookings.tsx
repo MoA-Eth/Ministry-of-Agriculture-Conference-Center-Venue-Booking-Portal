@@ -42,7 +42,7 @@ const toEthDateString = (gStr: string | undefined | null) => {
 
 
 export default function ManageBookings() {
-  const { role, bookings, updateBookingStatus, cancelBooking, approveManagement, venues, technicalServices, supportServices, toEthTime } = useApp();
+  const { role, bookings, updateBookingStatus, cancelBooking, deleteBooking, approveManagement, venues, technicalServices, supportServices, toEthTime } = useApp();
   const [activeTab, setActiveTab] = useState<TabFilter>(role === 'leadership' ? 'action' : 'mgmt_approved');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -216,8 +216,8 @@ export default function ManageBookings() {
 
   const handleDelete = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('Permanently delete/cancel this booking?')) {
-      cancelBooking(id);
+    if (confirm('Are you sure you want to permanently delete this booking? This action cannot be undone.')) {
+      deleteBooking(id);
     }
   };
 
@@ -867,11 +867,13 @@ export default function ManageBookings() {
                   </div>
 
                   {/* Admin Delete Action */}
-                  <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end">
-                    <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold px-6 py-5" onClick={(e) => handleDelete(safeId, e)}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete Booking Record
-                    </Button>
-                  </div>
+                  {role === 'system_admin' && (
+                    <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end">
+                      <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold px-6 py-5" onClick={(e) => handleDelete(safeId, e)}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete Booking Record
+                      </Button>
+                    </div>
+                  )}
 
                 </div>
               )}

@@ -798,6 +798,27 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         return Response(BookingSerializer(booking, context={'request': request}).data)
 
+    def destroy(self, request, *args, **kwargs):
+        """Permanently delete a booking. Restricted to system_admin only."""
+        if get_role(request.user) != 'system_admin':
+            raise PermissionDenied("Only System Administrators can permanently delete bookings.")
+
+        booking = self.get_object()
+        booking_id = booking.id
+        booking_title = booking.event_title
+        booking_venue = booking.venue.name if booking.venue else 'Unknown Venue'
+
+        booking.delete()
+
+        log_action(
+            request.user,
+            "Booking Permanently Deleted",
+            f"Booking MOA-BKG-{booking_id} ('{booking_title}' @ {booking_venue}) was permanently deleted by System Admin.",
+            request
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=['patch'], url_path='acknowledge_catering', permission_classes=[IsCateringOrAdmin])
     def acknowledge_catering(self, request, pk=None):
         booking = self.get_object()
