@@ -382,10 +382,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         # admin_finance) are exempt from the advance-notice restriction so
         # they can create urgent internal bookings.
         start_date_str = serializer.validated_data.get('start_date')
-        if start_date_str and rules.waiting_period_hours > 0:
+        event_title_str = serializer.validated_data.get('event_title', '')
+        is_vip_booking = '⭐ [VIP OVERRIDE]' in event_title_str
+
+        if start_date_str and rules.waiting_period_hours > 0 and not is_vip_booking:
             role = get_role(user) if (user and user.is_authenticated) else 'organizer'
             if role == 'organizer':
-                start_dt = datetime.combine(start_date_str, time.min).replace(
+                req_start_time = serializer.validated_data.get('start_time')
+                start_time_obj = req_start_time if req_start_time else time.min
+                start_dt = datetime.combine(start_date_str, start_time_obj).replace(
                     tzinfo=timezone.get_current_timezone()
                 )
                 min_allowed = timezone.now() + timedelta(hours=rules.waiting_period_hours)
@@ -402,7 +407,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         req_start_time = serializer.validated_data.get('start_time')
         req_end_time   = serializer.validated_data.get('end_time')
 
-        if venue and req_start_date and req_end_date and rules.buffer_time_minutes > 0:
+        if venue and req_start_date and req_end_date and rules.buffer_time_minutes > 0 and not is_vip_booking:
             buf = timedelta(minutes=rules.buffer_time_minutes)
             # Expand the requested window by the buffer on both sides
             buf_start_date = req_start_date

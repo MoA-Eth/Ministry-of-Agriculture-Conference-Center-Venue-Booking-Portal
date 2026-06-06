@@ -256,8 +256,8 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
       const data = await addBooking(payload);
       setSubmittedBookingId(data.id || data.reference_id || data.pk || 'UNKNOWN');
       toast.success('VIP Booking Requested Successfully!');
-    } catch (error) { 
-      toast.error('Submission error'); 
+    } catch (error: any) { 
+      toast.error(error?.message || 'Submission error'); 
     } finally {
       setIsSubmitting(false);
     }
