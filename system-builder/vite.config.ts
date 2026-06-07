@@ -18,12 +18,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    // Target modern browsers for smaller output
-    target: "es2020",
-    // Enable CSS code splitting
-    cssCodeSplit: true,
-    // Increase chunk size warning limit (some vendor libs are large)
-    chunkSizeWarningLimit: 600,
-  },
 }));

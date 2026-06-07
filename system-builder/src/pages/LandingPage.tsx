@@ -12,11 +12,11 @@ import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
 import moaLogo from '@/assets/moa-logo.png';
 import { Booking } from '@/lib/types';
 
-// Load hero image URLs lazily — only URLs are resolved at build time, not image bytes
-const heroModules = import.meta.glob('../assets/*.{png,jpg,jpeg,webp}', { eager: true, query: '?url', import: 'default' });
-const HERO_IMAGES: string[] = Object.entries(heroModules)
-  .filter(([path]) => !path.toLowerCase().includes('moa-logo') )
-  .map(([_, url]) => url as string);
+// Load all images from assets folder except the logo
+const heroModules = import.meta.glob('../assets/*.{png,jpg,jpeg,webp}', { eager: true });
+const HERO_IMAGES = Object.entries(heroModules)
+  .filter(([path]) => !path.toLowerCase().includes('moa-logo.png') && !path.toLowerCase().includes('moa logo.png'))
+  .map(([_, mod]: any) => mod.default);
 
 // Helper to display Gregorian date strings (YYYY-MM-DD) as Ethiopian dates
 const getEthDateString = (gregStr: string) => {
@@ -529,9 +529,6 @@ export default function LandingPage() {
                 key={img}
                 src={img}
                 alt={`Professional Conference Hall ${idx + 1}`}
-                loading={idx === 0 ? "eager" : "lazy"}
-                decoding={idx === 0 ? "auto" : "async"}
-                {...{ fetchPriority: idx === currentHeroIndex ? "high" : "low" } as any}
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${idx === currentHeroIndex ? 'opacity-100' : 'opacity-0'}`}
                 style={{
                   animation: idx === currentHeroIndex ? 'zoom-out 20s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'none'
@@ -621,7 +618,7 @@ export default function LandingPage() {
                 return (
                   <div key={venue.id} className={`group bg-white rounded-[2rem] p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col transition-all duration-500 ease-out relative ${isOutOfOrder ? 'opacity-80 grayscale-[0.5]' : 'hover:shadow-[0_40px_80px_rgba(0,0,0,0.08)] hover:-translate-y-2'}`} style={{ animation: `fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) ${100 * i}ms both` }}>
                     <div className="relative aspect-[16/10] rounded-[1.5rem] overflow-hidden mb-6 bg-slate-50">
-                      <img src={venue.image || getVenueImage(venue.type)} alt={venue.name} loading="lazy" decoding="async" className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${isOutOfOrder ? '' : 'group-hover:scale-110 grayscale-[0.1] group-hover:grayscale-0'}`} />
+                      <img src={venue.image || getVenueImage(venue.type)} alt={venue.name} className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${isOutOfOrder ? '' : 'group-hover:scale-110 grayscale-[0.1] group-hover:grayscale-0'}`} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                       {/* OUT OF ORDER BADGE OVERLAY */}

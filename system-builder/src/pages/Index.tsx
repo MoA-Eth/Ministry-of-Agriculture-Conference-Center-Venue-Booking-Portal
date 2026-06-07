@@ -1,37 +1,23 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useApp } from '@/lib/app-context';
 import AppShell from '@/components/AppShell';
-
-// Lazy-load all sub-pages — only the active page's chunk is fetched
-const CalendarView = lazy(() => import('@/components/CalendarView'));
-const VenuesPage = lazy(() => import('@/components/VenuesPage'));
-const NewBookingForm = lazy(() => import('@/components/NewBookingForm'));
-const MyBookings = lazy(() => import('@/components/BookingsList'));
-const ManageBookings = lazy(() => import('@/components/ManageBookings'));
-const Dashboard = lazy(() => import('@/components/Dashboard'));
-const UserManagement = lazy(() => import('@/components/UserManagement'));
-const VIPBookingForm = lazy(() => import('@/components/VIPBookingForm'));
-const ManageServices = lazy(() => import('@/components/ManageServices'));
-const VenueOperations = lazy(() => import('@/components/VenueOperations'));
-const EmailTemplateManager = lazy(() => import('@/components/MessageCenter'));
-const TechnicalTasks = lazy(() => import('@/components/TechnicalTasks'));
-const CateringTasks = lazy(() => import('@/components/CateringTasks'));
-const AuditLog = lazy(() => import('@/components/AuditLog'));
-const BusinessRules = lazy(() => import('@/components/BusinessRules'));
-const BillingAdmin = lazy(() => import('@/components/BillingAdmin'));
-
-// Lightweight spinner for lazy sub-pages within the AppShell
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-        <p className="text-xs font-medium text-slate-400">Loading page…</p>
-      </div>
-    </div>
-  );
-}
+import CalendarView from '@/components/CalendarView';
+import VenuesPage from '@/components/VenuesPage';
+import NewBookingForm from '@/components/NewBookingForm';
+import MyBookings from '@/components/BookingsList'; 
+import ManageBookings from '@/components/ManageBookings';
+import Dashboard from '@/components/Dashboard';
+import UserManagement from '@/components/UserManagement';
+import VIPBookingForm from '@/components/VIPBookingForm';
+import ManageServices from '@/components/ManageServices';
+import VenueOperations from '@/components/VenueOperations'; 
+import EmailTemplateManager from '@/components/MessageCenter';
+import TechnicalTasks from '@/components/TechnicalTasks';
+import CateringTasks from '@/components/CateringTasks';
+import AuditLog from '@/components/AuditLog';
+import BusinessRules from '@/components/BusinessRules';
+import BillingAdmin from '@/components/BillingAdmin';
 
 function AppContent() {
   const { role, token } = useApp();
@@ -124,9 +110,7 @@ function AppContent() {
         window.location.hash = `#/${p}`;
       }}
     >
-      <Suspense fallback={<PageLoader />}>
-        {renderPage()}
-      </Suspense>
+      {renderPage()}
     </AppShell>
   );
 }
