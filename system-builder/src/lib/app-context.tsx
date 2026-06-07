@@ -302,7 +302,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     fetchData();
-  }, [refreshTrigger, token, user, role]); // Removed getHeaders from dependency to prevent loops
+  }, [refreshTrigger, token]); // Only refetch when token changes or explicit refresh — user/role changes are derived from token
 
   const servicePrices = useMemo(() => {
     const prices: Record<string, number> = {};
