@@ -24,7 +24,8 @@ import {
   Menu, 
   X, 
   Settings,
-  Banknote
+  Banknote,
+  UserCog
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import moaLogo from '@/assets/moa-logo.png';
@@ -62,6 +63,7 @@ const navItems: NavItem[] = [
   { label: 'Activity Log', icon: <History size={20} />, id: 'audit-log', roles: ['event_management', 'system_admin', 'leadership'] },
   { label: 'Business Rules', icon: <Settings size={20} />, id: 'business-rules', roles: ['system_admin', 'event_management'] },
   { label: 'Billing & Admin', icon: <Banknote size={20} />, id: 'billing-admin', roles: ['admin_finance'] },
+  { label: 'Profile Settings', icon: <UserCog size={20} />, id: 'profile-settings', roles: ['organizer', 'event_management', 'ict_admin', 'catering_support', 'admin_finance', 'leadership', 'system_admin'] },
 ];
 
 interface AppShellProps {
@@ -219,14 +221,19 @@ export default function AppShell({ currentPage, onNavigate, children }: AppShell
         {/* Role switcher (Bottom profile block) */}
         {(!collapsed || mobileMenuOpen) && token && user && (
           <div className="px-6 py-6 border-t border-white/10 bg-black/20 mt-auto shrink-0">
-            <div className="flex items-center gap-3 mb-4">
-               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm border border-white/20 uppercase shrink-0">
+            <div 
+              className="flex items-center gap-3 mb-4 cursor-pointer group hover:bg-white/5 -mx-2 px-2 py-2 rounded-xl transition-all"
+              onClick={() => { onNavigate('profile-settings'); setMobileMenuOpen(false); }}
+              title="Profile Settings"
+            >
+               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm border border-white/20 uppercase shrink-0 group-hover:bg-white/20 transition-colors">
                  {user.name?.charAt(0) || 'U'}
                </div>
-               <div className="min-w-0">
+               <div className="min-w-0 flex-1">
                  <p className="text-sm font-bold truncate text-white">{user.name}</p>
                  <p className="text-xs text-[#8cbaa2] truncate">{user.email}</p>
                </div>
+               <UserCog size={14} className="text-[#8cbaa2] group-hover:text-white transition-colors shrink-0" />
             </div>
             
             <div className="w-full text-xs font-bold text-[#b4d1c3] bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-center truncate">

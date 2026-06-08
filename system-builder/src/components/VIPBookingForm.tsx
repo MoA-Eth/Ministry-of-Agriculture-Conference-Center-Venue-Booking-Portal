@@ -22,6 +22,42 @@ const timeToMinutes = (timeStr: string | undefined) => {
   return (h || 0) * 60 + (m || 0);
 };
 
+const isFullDayBooked = (dateStr: string, schedules: any[]) => {
+  const daySchedules = schedules.filter(s => s.date === dateStr && s.isHard);
+  if (daySchedules.length === 0) return false;
+  
+  const hasFullDaySingle = daySchedules.some(s => {
+    const st = timeToMinutes(s.start);
+    const en = timeToMinutes(s.end);
+    return st <= 540 && en >= 1020; // 09:00 to 17:00
+  });
+  if (hasFullDaySingle) return true;
+
+  const DAY_START = 540;
+  const DAY_END = 1020;
+  const intervals = daySchedules.map(s => ({
+    start: Math.max(DAY_START, timeToMinutes(s.start)),
+    end: Math.min(DAY_END, timeToMinutes(s.end))
+  })).filter(inv => inv.start < inv.end);
+
+  if (intervals.length === 0) return false;
+  intervals.sort((a, b) => a.start - b.start);
+  
+  const merged: {start: number, end: number}[] = [];
+  intervals.forEach(curr => {
+    if (merged.length === 0) { merged.push({ ...curr }); }
+    else {
+      const last = merged[merged.length - 1];
+      if (curr.start <= last.end) { last.end = Math.max(last.end, curr.end); }
+      else { merged.push({ ...curr }); }
+    }
+  });
+
+  if (merged.length === 1 && merged[0].start <= DAY_START && merged[0].end >= DAY_END) { return true; }
+  return false;
+};
+
+
 export default function VIPBookingForm({ onComplete }: { onComplete: () => void }) {
   const navigate = useNavigate();
   const { user, bookings, venues, addBooking, refreshData, technicalServices, supportServices, servicePrices, toEthTime } = useApp();
@@ -53,19 +89,6 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
 
   const selectedVenue = venues.find(v => v.id?.toString() === form.venueId?.toString());
 
-  const bookedDates = useMemo(() => {
-    if (!form.venueId) return [];
-    const dates: Date[] = [];
-    bookings.filter(b => b.venueId.toString() === form.venueId.toString() && b.status.toLowerCase() === 'approved')
-    .forEach(b => {
-      try {
-        const start = parseISO(b.startDate); const end = parseISO(b.endDate);
-        if (start && end && start <= end) dates.push(...eachDayOfInterval({ start, end }));
-      } catch (e) {}
-    });
-    return dates;
-  }, [bookings, form.venueId]);
-
   const existingSchedules = useMemo(() => {
     if (!form.venueId) return [];
     const vBookings = bookings?.filter(b => 
@@ -90,6 +113,19 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     });
     return schedules;
   }, [bookings, form.venueId]);
+
+  const hardBookedDates = useMemo(() => {
+    const datesWithHardSchedules = Array.from(new Set(existingSchedules.filter(s => s.isHard).map(s => s.date)));
+    return datesWithHardSchedules.filter(d => isFullDayBooked(d, existingSchedules)).map(d => parseISO(d));
+  }, [existingSchedules]);
+
+  const partialBookedDates = useMemo(() => {
+    const datesWithHardSchedules = Array.from(new Set(existingSchedules.filter(s => s.isHard).map(s => s.date)));
+    return datesWithHardSchedules.filter(d => !isFullDayBooked(d, existingSchedules)).map(d => parseISO(d));
+  }, [existingSchedules]);
+
+  const softBookedDates = useMemo(() => existingSchedules.filter(s => !s.isHard).map(s => parseISO(s.date)), [existingSchedules]);
+
 
   const dailyConflicts = useMemo(() => {
     const issues: { date: string, type: 'hard_overlap' | 'soft_overlap' | 'cleaning', msg: string }[] = [];
@@ -420,7 +456,9 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                    }
                    setForm(p => ({ ...p, startDate: range?.from ? format(range.from, 'yyyy-MM-dd') : '', endDate: range?.to ? format(range.to, 'yyyy-MM-dd') : '' }))
                  }} 
-                 bookedDates={bookedDates} 
+                 bookedDates={hardBookedDates} 
+                 partialBookedDates={partialBookedDates}
+                 pendingDates={softBookedDates}
                />
                <div className="flex-1 w-full space-y-4">
                  <div>

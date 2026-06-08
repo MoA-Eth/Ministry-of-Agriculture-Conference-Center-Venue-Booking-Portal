@@ -18,6 +18,7 @@ import CateringTasks from '@/components/CateringTasks';
 import AuditLog from '@/components/AuditLog';
 import BusinessRules from '@/components/BusinessRules';
 import BillingAdmin from '@/components/BillingAdmin';
+import ProfileSettings from '@/components/ProfileSettings';
 
 function AppContent() {
   const { role, token } = useApp();
@@ -45,7 +46,7 @@ function AppContent() {
         'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
         'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
         'venue-operations', 'message-center', 'technical-tasks', 'catering-tasks',
-        'audit-log', 'business-rules', 'billing-admin'
+        'audit-log', 'business-rules', 'billing-admin', 'profile-settings'
       ];
       
       if (validPages.includes(hash)) {
@@ -97,6 +98,8 @@ function AppContent() {
         return ['system_admin', 'event_management'].includes(role) ? <BusinessRules /> : <CalendarView />;
       case 'billing-admin':
         return role === 'admin_finance' ? <BillingAdmin /> : <CalendarView />;
+      case 'profile-settings':
+        return <ProfileSettings />;
       default: 
         return !token ? <VIPBookingForm onComplete={() => setPage('my-bookings')} /> : <Dashboard />;
     }

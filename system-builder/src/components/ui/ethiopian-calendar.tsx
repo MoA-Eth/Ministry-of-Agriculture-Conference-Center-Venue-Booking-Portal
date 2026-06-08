@@ -11,11 +11,12 @@ interface CalendarProps {
   selected?: { from?: Date; to?: Date };
   onSelect?: (range: { from?: Date; to?: Date }) => void;
   bookedDates?: Date[];
+  partialBookedDates?: Date[];
   pendingDates?: Date[];
   [key: string]: any; 
 }
 
-export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendingDates = [], allowPast = false }: CalendarProps & { allowPast?: boolean }) {
+export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partialBookedDates = [], pendingDates = [], allowPast = false }: CalendarProps & { allowPast?: boolean }) {
   
   // FIX: Using 12:00 PM (Noon) prevents timezone offsets from shifting dates to "yesterday"
   const [viewAnchor, setViewAnchor] = useState(() => {
@@ -65,6 +66,7 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
   };
 
   const isBooked = (date: Date) => bookedDates.some(d => isSameDay(d, date));
+  const isPartialBooked = (date: Date) => partialBookedDates.some(d => isSameDay(d, date));
   const isPending = (date: Date) => pendingDates.some(d => isSameDay(d, date));
 
   const isPast = (date: Date) => {
@@ -107,6 +109,7 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
       const ethDayNumber = i + 1;
       const selectedState = isSelected(currentGCDate);
       const booked = isBooked(currentGCDate);
+      const partialBooked = isPartialBooked(currentGCDate);
       const pending = isPending(currentGCDate);
       const past = isPast(currentGCDate);
       const today = isToday(currentGCDate);
@@ -115,6 +118,8 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
 
       if (booked) {
         className += "bg-red-50 text-red-600 cursor-pointer border border-red-200 hover:bg-red-100";
+      } else if (partialBooked) {
+        className += "bg-blue-50 text-blue-600 cursor-pointer border border-blue-200 hover:bg-blue-100";
       } else if (past && !allowPast) {
         className += "bg-slate-50 text-slate-300 cursor-not-allowed line-through opacity-60";
       } else if (selectedState) {
@@ -187,7 +192,8 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], pendin
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-100 ring-1 ring-emerald-500"></div> Today</div>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#268053]"></div> Selected</div>
         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-200"></div> Pending</div>
-        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></div> Booked (Click to check times)</div>
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-100 border border-blue-200"></div> Partially Booked</div>
+        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-200"></div> Fully Booked</div>
       </div>
     </div>
   );

@@ -21,6 +21,41 @@ const timeToMinutes = (timeStr: string | undefined) => {
   return (h || 0) * 60 + (m || 0);
 };
 
+const isFullDayBooked = (dateStr: string, schedules: any[]) => {
+  const daySchedules = schedules.filter(s => s.date === dateStr && s.isHard);
+  if (daySchedules.length === 0) return false;
+  
+  const hasFullDaySingle = daySchedules.some(s => {
+    const st = timeToMinutes(s.start);
+    const en = timeToMinutes(s.end);
+    return st <= 540 && en >= 1020; // 09:00 to 17:00
+  });
+  if (hasFullDaySingle) return true;
+
+  const DAY_START = 540;
+  const DAY_END = 1020;
+  const intervals = daySchedules.map(s => ({
+    start: Math.max(DAY_START, timeToMinutes(s.start)),
+    end: Math.min(DAY_END, timeToMinutes(s.end))
+  })).filter(inv => inv.start < inv.end);
+
+  if (intervals.length === 0) return false;
+  intervals.sort((a, b) => a.start - b.start);
+  
+  const merged: {start: number, end: number}[] = [];
+  intervals.forEach(curr => {
+    if (merged.length === 0) { merged.push({ ...curr }); }
+    else {
+      const last = merged[merged.length - 1];
+      if (curr.start <= last.end) { last.end = Math.max(last.end, curr.end); }
+      else { merged.push({ ...curr }); }
+    }
+  });
+
+  if (merged.length === 1 && merged[0].start <= DAY_START && merged[0].end >= DAY_END) { return true; }
+  return false;
+};
+
 export default function NewBookingForm({ onComplete, hideHero = false }: { onComplete: () => void, hideHero?: boolean }) {
   const { bookings = [], venues = [], addBooking, user, technicalServices = [], supportServices = [], token, toEthTime } = useApp();
   
@@ -115,8 +150,69 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     return schedules;
   }, [bookings, form.venueId]);
 
-  const hardBookedDates = useMemo(() => existingSchedules.filter(s => s.isHard).map(s => parseISO(s.date)), [existingSchedules]);
-  const softBookedDates = useMemo(() => existingSchedules.filter(s => !s.isHard).map(s => parseISO(s.date)), [existingSchedules]);
+  const { hardBookedDates, partialBookedDates, softBookedDates } = useMemo(() => {
+    const hardMap = new Map<string, any[]>();
+    const softMap = new Map<string, any[]>();
+
+    existingSchedules.forEach(s => {
+      if (s.isHard) {
+        if (!hardMap.has(s.date)) hardMap.set(s.date, []);
+        hardMap.get(s.date)!.push(s);
+      } else {
+        if (!softMap.has(s.date)) softMap.set(s.date, []);
+        softMap.get(s.date)!.push(s);
+      }
+    });
+
+    const checkFullDayBlocked = (schedules: any[]) => {
+      const DAY_START = 540; // 09:00
+      const DAY_END = 1020;  // 17:00
+      const blockedIntervals = schedules.map(ex => ({
+        start: timeToMinutes(ex.start) - 60,
+        end: timeToMinutes(ex.end) + 60
+      })).sort((a, b) => a.start - b.start);
+
+      const mergedBlocks: { start: number, end: number }[] = [];
+      blockedIntervals.forEach(curr => {
+        if (mergedBlocks.length === 0) mergedBlocks.push({ ...curr });
+        else {
+          const last = mergedBlocks[mergedBlocks.length - 1];
+          if (curr.start <= last.end) last.end = Math.max(last.end, curr.end);
+          else mergedBlocks.push({ ...curr });
+        }
+      });
+
+      let currentStart = DAY_START;
+      let hasAvailable = false;
+      mergedBlocks.forEach(block => {
+        if (block.start - currentStart >= 60) hasAvailable = true;
+        currentStart = Math.max(currentStart, block.end);
+      });
+      if (DAY_END - currentStart >= 60) hasAvailable = true;
+
+      return !hasAvailable;
+    };
+
+    const hardDates: Date[] = [];
+    const partialDates: Date[] = [];
+    const softDates: Date[] = [];
+
+    Array.from(hardMap.keys()).forEach(dateStr => {
+      if (checkFullDayBlocked(hardMap.get(dateStr)!)) {
+        hardDates.push(parseISO(dateStr));
+      } else {
+        partialDates.push(parseISO(dateStr));
+      }
+    });
+
+    Array.from(softMap.keys()).forEach(dateStr => {
+      if (!hardMap.has(dateStr)) {
+        softDates.push(parseISO(dateStr));
+      }
+    });
+
+    return { hardBookedDates: hardDates, partialBookedDates: partialDates, softBookedDates: softDates };
+  }, [existingSchedules]);
 
   const dailyConflicts = useMemo(() => {
     const issues: { date: string, type: 'hard_overlap' | 'soft_overlap' | 'cleaning', msg: string }[] = [];
@@ -508,6 +604,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                       setForm(p => ({ ...p, startDate: r?.from ? format(r.from, 'yyyy-MM-dd') : '', endDate: r?.to ? format(r.to, 'yyyy-MM-dd') : '' }))
                     }} 
                     bookedDates={hardBookedDates}
+                    partialBookedDates={partialBookedDates}
                     pendingDates={softBookedDates}
                   />
                 </div>
