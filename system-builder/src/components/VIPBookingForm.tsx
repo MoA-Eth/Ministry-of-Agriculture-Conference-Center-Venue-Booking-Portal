@@ -29,12 +29,12 @@ const isFullDayBooked = (dateStr: string, schedules: any[]) => {
   const hasFullDaySingle = daySchedules.some(s => {
     const st = timeToMinutes(s.start);
     const en = timeToMinutes(s.end);
-    return st <= 540 && en >= 1020; // 09:00 to 17:00
+    return st <= 510 && en >= 1050; // 08:30 to 17:30
   });
   if (hasFullDaySingle) return true;
 
-  const DAY_START = 540;
-  const DAY_END = 1020;
+  const DAY_START = 510;
+  const DAY_END = 1050;
   const intervals = daySchedules.map(s => ({
     start: Math.max(DAY_START, timeToMinutes(s.start)),
     end: Math.min(DAY_END, timeToMinutes(s.end))
@@ -133,8 +133,8 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     form.dailySchedules?.forEach(newSched => {
       const dayExisting = existingSchedules.filter(ex => ex.date === newSched.date);
       
-      const nStart = timeToMinutes(newSched.startTime || '09:00');
-      const nEnd = timeToMinutes(newSched.endTime || '17:00');
+      const nStart = timeToMinutes(newSched.startTime || '08:30');
+      const nEnd = timeToMinutes(newSched.endTime || '17:30');
       
       let hasHard = false;
       let cleanMsg = '';
@@ -174,7 +174,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
         currentDate.setDate(currentDate.getDate() + 1);
       }
       setForm(prev => {
-        const newSchedules = dates.map(d => prev.dailySchedules.find(s => s.date === d) || { date: d, startTime: '09:00', endTime: '17:00', allDay: false });
+        const newSchedules = dates.map(d => prev.dailySchedules.find(s => s.date === d) || { date: d, startTime: '08:30', endTime: '17:30', allDay: false });
         return { ...prev, dailySchedules: newSchedules };
       });
     }
@@ -233,6 +233,11 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
               setClashWarning(`Warning: This VIP booking overlaps with "${regConflict.eventTitle || regConflict.event_title}". Proceeding will automatically cancel their booking.`);
            }
         }
+      }
+    } else if (step === 3) {
+      if (!form.letterAttachment) {
+        toast.error("Please attach an official request letter (PDF) to proceed.");
+        return false;
       }
     }
     setErrors(errs);
@@ -311,11 +316,17 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     });
   };
 
-  const generateHourOptions = () => Array.from({ length: 9 }, (_, i) => {
-    const hour = i + 9;
-    const h = hour.toString().padStart(2, '0') + ':00'; 
-    return <option key={h} value={h}>{toEthTime(h)}</option>;
-  });
+  const generateHourOptions = () => {
+    const options = [];
+    for (let h = 8; h <= 17; h++) {
+      for (let m of ['00', '30']) {
+        if (h === 8 && m === '00') continue;
+        const timeStr = h.toString().padStart(2, '0') + ':' + m;
+        options.push(<option key={timeStr} value={timeStr}>{toEthTime(timeStr)}</option>);
+      }
+    }
+    return options;
+  };
 
   const inputClass = (field: string) => `w-full text-sm border rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${errors[field] ? 'border-red-300 ring-4 ring-red-50' : 'border-slate-200'}`;
 
@@ -389,7 +400,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
             
             <div className="grid sm:grid-cols-2 gap-6">
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Name *</label><input value={form.organizerName} onChange={e => setForm(p => ({ ...p, organizerName: e.target.value }))} className={inputClass('organizerName')} />{errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}</div>
-              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization / Ministry</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} /></div>
+              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization/Department</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} /></div>
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Email *</label><input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} />{errors.organizerEmail && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerEmail}</p>}</div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Phone *</label>
@@ -407,7 +418,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                 {errors.organizerPhone && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerPhone}</p>}
               </div>
             </div>
-            <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Event Title *</label><input value={form.eventTitle} onChange={e => setForm(p => ({ ...p, eventTitle: e.target.value }))} className={inputClass('eventTitle')} />{errors.eventTitle && <p className="text-xs text-red-500 mt-1 font-bold">{errors.eventTitle}</p>}</div>
+            <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Event/Theme *</label><input value={form.eventTitle} onChange={e => setForm(p => ({ ...p, eventTitle: e.target.value }))} className={inputClass('eventTitle')} />{errors.eventTitle && <p className="text-xs text-red-500 mt-1 font-bold">{errors.eventTitle}</p>}</div>
             <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Description</label><textarea rows={3} value={form.eventDescription} onChange={e => setForm(p => ({ ...p, eventDescription: e.target.value }))} className={inputClass('eventDescription')} /></div>
             
             <Button onClick={nextStep} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold h-12 rounded-xl mt-4">Continue to Venue</Button>
@@ -547,18 +558,6 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                 })}
              </div>
 
-             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-8 mb-4">Hospitality Services</h3>
-             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {supportServices
-                  .filter(s => s.name !== 'Coffee Break' && s.name !== 'Lunch Catering')
-                  .map(s => (
-                    <div key={s.id} onClick={() => toggleService('supportServices', s.id?.toString() || '')} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${form.supportServices.includes(s.id?.toString() || '') ? 'border-amber-600 bg-amber-50 shadow-md scale-[1.02]' : 'border-slate-100 hover:border-amber-200 hover:bg-slate-50'}`}>
-                       <p className={`text-xs font-black uppercase tracking-tight py-1 ${form.supportServices.includes(s.id?.toString() || '') ? 'text-amber-900' : 'text-slate-600'}`}>{s.name}</p>
-                    </div>
-                  ))
-                }
-             </div>
-
              <div className="mt-12 p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
                <div className="flex items-center gap-3 mb-5">
                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
@@ -602,12 +601,13 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                  </div>
                </div>
              </div>
+
              
              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center mt-6 cursor-pointer hover:bg-slate-50" onClick={() => document.getElementById('file')?.click()}>
                 <input id="file" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
                 <Paperclip className="mx-auto text-slate-400 mb-2" />
-                <p className="text-sm font-bold">{form.letterAttachment ? form.letterAttachment.name : 'Attach Official Mandate (Optional)'}</p>
-                <p className="text-xs font-medium text-black mt-2 uppercase tracking-widest">Required for external organizers</p>
+                <p className="text-sm font-bold">{form.letterAttachment ? form.letterAttachment.name : 'Attach Official Mandate (Required)'}</p>
+                <p className="text-xs font-medium text-black mt-2 uppercase tracking-widest">Required for Internal organizers</p>
              </div>
 
              <div className="flex gap-4 mt-8">

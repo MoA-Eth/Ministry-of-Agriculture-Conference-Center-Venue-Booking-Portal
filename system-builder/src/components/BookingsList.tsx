@@ -129,7 +129,7 @@ export default function BookingsList() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block"><Ticket size={12} className="inline mr-1"/> Event Title</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block"><Ticket size={12} className="inline mr-1"/> Event/Theme</label>
                   <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-[#268053] outline-none" value={editForm.event_title} onChange={e => setEditForm({...editForm, event_title: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

@@ -332,9 +332,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (form.dailySchedules?.length > 0) {
         const first = form.dailySchedules[0];
-        formData.append('start_time', first.allDay ? '00:00' : (first.startTime || '09:00'));
+        formData.append('start_time', first.allDay ? '00:00' : (first.startTime || '08:30'));
         const last = form.dailySchedules[form.dailySchedules.length - 1];
-        formData.append('end_time', last.allDay ? '23:59' : (last.endTime || '17:00'));
+        formData.append('end_time', last.allDay ? '23:59' : (last.endTime || '17:30'));
       }
 
       const t_services = form.technicalServices || form.technical_services || [];

@@ -228,7 +228,7 @@ export default function TrackBookingPage() {
              <div className="grid sm:grid-cols-2 gap-8 mb-8">
                 <div className="space-y-6">
                   <div>
-                    <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"><Ticket size={14} /> Event Name</p>
+                    <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"><Ticket size={14} /> Event/Theme</p>
                     <p className="text-lg font-bold text-slate-800">{booking.eventTitle}</p>
                   </div>
                   <div>
@@ -309,7 +309,7 @@ export default function TrackBookingPage() {
 
              <form onSubmit={handleEditSubmit} className="space-y-6">
                <div>
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1"><Ticket size={12} className="inline mr-1"/> Event Title</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1"><Ticket size={12} className="inline mr-1"/> Event/Theme</label>
                  <input required type="text" value={editForm.eventTitle} onChange={e => setEditForm({...editForm, eventTitle: e.target.value})} className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl font-bold text-sm focus:outline-none focus:border-[#268053]" />
                </div>
                

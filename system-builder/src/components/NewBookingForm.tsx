@@ -28,12 +28,12 @@ const isFullDayBooked = (dateStr: string, schedules: any[]) => {
   const hasFullDaySingle = daySchedules.some(s => {
     const st = timeToMinutes(s.start);
     const en = timeToMinutes(s.end);
-    return st <= 540 && en >= 1020; // 09:00 to 17:00
+    return st <= 510 && en >= 1050; // 08:30 to 17:30
   });
   if (hasFullDaySingle) return true;
 
-  const DAY_START = 540;
-  const DAY_END = 1020;
+  const DAY_START = 510;
+  const DAY_END = 1050;
   const intervals = daySchedules.map(s => ({
     start: Math.max(DAY_START, timeToMinutes(s.start)),
     end: Math.min(DAY_END, timeToMinutes(s.end))
@@ -165,8 +165,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     });
 
     const checkFullDayBlocked = (schedules: any[]) => {
-      const DAY_START = 540; // 09:00
-      const DAY_END = 1020;  // 17:00
+      const DAY_START = 510; // 08:30
+      const DAY_END = 1050;  // 17:30
       const blockedIntervals = schedules.map(ex => ({
         start: timeToMinutes(ex.start) - 60,
         end: timeToMinutes(ex.end) + 60
@@ -220,8 +220,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     form.dailySchedules?.forEach(newSched => {
       const dayExisting = existingSchedules.filter(ex => ex.date === newSched.date);
       
-      const nStart = timeToMinutes(newSched.startTime || '09:00');
-      const nEnd = timeToMinutes(newSched.endTime || '17:00');
+      const nStart = timeToMinutes(newSched.startTime || '08:30');
+      const nEnd = timeToMinutes(newSched.endTime || '17:30');
       
       let hasHard = false;
       let hasSoft = false;
@@ -256,11 +256,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const getAvailableSlots = (dateStr: string) => {
     const dayExisting = existingSchedules.filter(ex => ex.date === dateStr);
     if (dayExisting.length === 0) {
-      return [{ start: '09:00', end: '17:00' }];
+      return [{ start: '08:30', end: '17:30' }];
     }
 
-    const DAY_START = 540; // 09:00
-    const DAY_END = 1020;  // 17:00
+    const DAY_START = 510; // 08:30
+    const DAY_END = 1050;  // 17:30
 
     const blockedIntervals: { start: number, end: number }[] = [];
     dayExisting.forEach(ex => {
@@ -329,7 +329,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       }
       setForm(prev => ({
         ...prev,
-        dailySchedules: dates.map(d => prev.dailySchedules?.find(s => s.date === d) || { date: d, startTime: '09:00', endTime: '17:00', allDay: false })
+        dailySchedules: dates.map(d => prev.dailySchedules?.find(s => s.date === d) || { date: d, startTime: '08:30', endTime: '17:30', allDay: false })
       }));
     }
   }, [form.startDate, form.endDate]);
@@ -379,16 +379,27 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       if (dailyConflicts.some(c => c.type === 'hard_overlap' || c.type === 'cleaning')) {
         errs.rangeConflict = 'Please resolve hard time conflicts below.';
       }
+    } else if (step === 3) {
+      if (!form.letterAttachment) {
+        toast.error("Please attach an official request letter (PDF) to proceed.");
+        return false;
+      }
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const generateHourOptions = () => Array.from({ length: 9 }, (_, i) => {
-    const hour = i + 9;
-    const h = hour.toString().padStart(2, '0') + ':00'; 
-    return <option key={h} value={h}>{toEthTime(h)}</option>;
-  });
+  const generateHourOptions = () => {
+    const options = [];
+    for (let h = 8; h <= 17; h++) {
+      for (let m of ['00', '30']) {
+        if (h === 8 && m === '00') continue;
+        const timeStr = h.toString().padStart(2, '0') + ':' + m;
+        options.push(<option key={timeStr} value={timeStr}>{toEthTime(timeStr)}</option>);
+      }
+    }
+    return options;
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -517,7 +528,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   {errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Organization *</label>
+                  <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Organization/Department *</label>
                   <input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} placeholder="Organization Name" />
                 </div>
               </div>
@@ -545,7 +556,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
               </div>
               <hr className="border-slate-100" />
               <div>
-                <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Event Title *</label>
+                <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Event/Theme *</label>
                 <input value={form.eventTitle} onChange={e => setForm(p => ({ ...p, eventTitle: e.target.value }))} className={inputClass('eventTitle')} placeholder="Annual Review Meeting 2026" />
                 {errors.eventTitle && <p className="text-xs text-red-500 mt-1 font-bold">{errors.eventTitle}</p>}
               </div>
@@ -699,7 +710,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Available Slots:</span>
                               <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                                All Day (3:00 Morning - 11:00 Afternoon / 09:00 - 17:00)
+                                All Day (2:30 Morning - 11:30 Afternoon / 08:30 - 17:30)
                               </span>
                             </div>
                           )}
@@ -727,7 +738,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
             <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
               <div className="grid md:grid-cols-2 gap-10">
                 {['Technical', 'Hospitality'].map((l, i) => {
-                  const list = i === 0 ? technicalServices : supportServices.filter(s => s.name !== 'Coffee Break' && s.name !== 'Lunch Catering');
+                  const list = i === 0 ? technicalServices : [];
                   const formList = i === 0 ? form.technicalServices : form.supportServices;
                   const type = i === 0 ? 'technicalServices' : 'supportServices';
                   
@@ -737,51 +748,53 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                         {i === 0 ? <MonitorSmartphone className="text-blue-500"/> : <Coffee className="text-amber-500"/>} 
                         {l} Support
                       </p>
-                      <div className="grid gap-3">
-                        {list && list.length > 0 ? (
-                          list.map(s => {
-                            const isIncluded = isServiceIncluded(type, s.id?.toString());
-                            const isSelected = formList.includes(s.id?.toString());
-                            
-                            return (
-                              <div 
-                                key={s.id} 
-                                onClick={() => !isIncluded && toggleService(type, s.id?.toString())} 
-                                className={`p-4 border-2 rounded-xl flex justify-between items-center transition-all duration-300 ${
-                                  isIncluded
-                                    ? 'border-emerald-200 bg-emerald-50/40 opacity-90 cursor-not-allowed'
-                                    : isSelected 
-                                      ? 'border-[#268053] bg-emerald-50/50 shadow-md shadow-emerald-500/10 scale-[1.02] cursor-pointer' 
-                                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isIncluded || isSelected ? 'bg-[#268053] border-[#268053]' : 'border-slate-300'}`}>
-                                    {(isIncluded || isSelected) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                      {i === 0 && (
+                        <div className="grid gap-3">
+                          {list && list.length > 0 ? (
+                            list.map(s => {
+                              const isIncluded = isServiceIncluded(type, s.id?.toString());
+                              const isSelected = formList.includes(s.id?.toString());
+                              
+                              return (
+                                <div 
+                                  key={s.id} 
+                                  onClick={() => !isIncluded && toggleService(type, s.id?.toString())} 
+                                  className={`p-4 border-2 rounded-xl flex justify-between items-center transition-all duration-300 ${
+                                    isIncluded
+                                      ? 'border-emerald-200 bg-emerald-50/40 opacity-90 cursor-not-allowed'
+                                      : isSelected 
+                                        ? 'border-[#268053] bg-emerald-50/50 shadow-md shadow-emerald-500/10 scale-[1.02] cursor-pointer' 
+                                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isIncluded || isSelected ? 'bg-[#268053] border-[#268053]' : 'border-slate-300'}`}>
+                                      {(isIncluded || isSelected) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                    </div>
+                                    <span className={`text-xs font-bold uppercase tracking-tight ${isIncluded || isSelected ? 'text-emerald-900' : 'text-slate-600'}`}>
+                                      {s.name}
+                                    </span>
                                   </div>
-                                  <span className={`text-xs font-bold uppercase tracking-tight ${isIncluded || isSelected ? 'text-emerald-900' : 'text-slate-600'}`}>
-                                    {s.name}
-                                  </span>
+                                  
+                                  {isIncluded ? (
+                                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-widest">
+                                      <Lock size={10} /> Included
+                                    </span>
+                                  ) : null}
                                 </div>
-                                
-                                {isIncluded ? (
-                                  <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-widest">
-                                    <Lock size={10} /> Included
-                                  </span>
-                                ) : null}
-                              </div>
-                            )
-                          })
-                        ) : (
-                          <div className="text-[10px] font-bold text-slate-400 italic py-4 flex items-center gap-2 animate-pulse">
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
-                            Checking available services...
-                          </div>
-                        )}
-                      </div>
+                              )
+                            })
+                          ) : (
+                            <div className="text-[10px] font-bold text-slate-400 italic py-4 flex items-center gap-2 animate-pulse">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
+                              Checking available services...
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {i === 1 && (
-                        <div className="mt-12 p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
+                        <div className="p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
                           <div className="flex items-center gap-3 mb-5">
                             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
                               <Coffee size={20} />
@@ -835,11 +848,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   <Paperclip className="w-8 h-8 text-slate-400 group-hover:text-emerald-500 transition-colors" />
                 </div>
                 <p className="text-sm font-black text-slate-600 uppercase tracking-widest">{form.letterAttachment ? form.letterAttachment.name : 'Attach Official Request (PDF)'}</p>
-                <p className="text-xs font-medium text-black mt-2 uppercase tracking-widest">Required for external organizers</p>
+                <p className="text-xs font-medium text-black mt-2 uppercase tracking-widest">Required for Internal organizers</p>
               </div>
               <div className="flex justify-between pt-6 border-t border-slate-100">
                 <button onClick={() => setCurrentStep(2)} className="font-black text-slate-400 hover:text-slate-600 uppercase text-xs tracking-widest transition-colors">Back</button>
-                <Button onClick={() => setCurrentStep(4)} className="px-12 h-14 bg-gradient-to-r from-[#1b5e3a] to-[#268053] hover:from-[#15472c] hover:to-[#1b5e3a] text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-emerald-900/20 transition-all hover:-translate-y-1">FINAL REVIEW</Button>
+                <Button onClick={() => validateStep(3) && setCurrentStep(4)} className="px-12 h-14 bg-gradient-to-r from-[#1b5e3a] to-[#268053] hover:from-[#15472c] hover:to-[#1b5e3a] text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-emerald-900/20 transition-all hover:-translate-y-1">FINAL REVIEW</Button>
               </div>
             </div>
           )}
