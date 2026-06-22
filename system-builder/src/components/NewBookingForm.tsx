@@ -99,12 +99,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- VIP ROOM SECURITY FILTER ---
-  // Only allow admins/leadership to see rooms with "VIP" in the name
   const isPrivilegedUser = ['leadership', 'system_admin', 'event_management'].includes(user?.role || '');
-  const availableVenues = venues?.filter(v => 
-    isPrivilegedUser ? true : !(v.name || '').toLowerCase().includes('vip')
-  );
+  const availableVenues = venues || [];
 
   const getEthDateString = (gregStr: string) => {
     if (!gregStr) return '';
@@ -576,17 +572,21 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   <label className="text-xs font-medium text-black uppercase block mb-2 tracking-widest flex items-center gap-2"><Building2 size={14}/> Venue Selection *</label>
                 <select value={form.venueId} onChange={e => setForm(p => ({ ...p, venueId: e.target.value }))} className={inputClass('venueId')}>
                   <option value="">Select a hall...</option>
-                  {/* --- FIXED: Uses availableVenues to hide VIP rooms --- */}
-                  {availableVenues?.map(v => (
-                    <option 
-                      key={v.id} 
-                      value={v.id} 
-                      disabled={v.status === 'out_of_order'}
-                      className={v.status === 'out_of_order' ? 'text-red-500 font-bold bg-red-50' : ''}
-                    >
-                      {v.name} (Max: {v.capacity}) {v.status === 'out_of_order' ? ' ❌ [OUT OF ORDER]' : ''}
-                    </option>
-                  ))}
+                  {/* --- FIXED: Uses availableVenues to show all, but disables VIP for unprivileged users --- */}
+                  {availableVenues?.map(v => {
+                    const isOutOfOrder = v.status === 'out_of_order';
+                    
+                    return (
+                      <option 
+                        key={v.id} 
+                        value={v.id} 
+                        disabled={isOutOfOrder}
+                        className={isOutOfOrder ? 'text-red-500 font-bold bg-red-50' : ''}
+                      >
+                        {v.name} (Max: {v.capacity}) {isOutOfOrder ? ' ❌ [OUT OF ORDER]' : ''}
+                      </option>
+                    )
+                  })}
                 </select>
                 </div>
                 <div>

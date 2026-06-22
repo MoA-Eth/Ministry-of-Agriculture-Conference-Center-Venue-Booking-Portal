@@ -119,11 +119,8 @@ export default function VenuesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // --- VIP ROOM SECURITY FILTER ---
-  // Only allow admins/leadership to see rooms with "VIP" in the name
   const isPrivilegedUser = ['leadership', 'system_admin', 'event_management'].includes(role || '');
-  const availableVenues = venues?.filter(v => 
-    isPrivilegedUser ? true : !(v.name || '').toLowerCase().includes('vip')
-  ) || [];
+  const availableVenues = venues || [];
 
   // Management State
   const [isAdding, setIsAdding] = useState(false);
