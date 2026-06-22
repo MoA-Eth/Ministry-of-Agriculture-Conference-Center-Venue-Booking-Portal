@@ -717,22 +717,14 @@ export default function LandingPage() {
                           </div>
                         </div>
 
-                        {/* Lock button for VIP Venues if user is not an Admin/Leadership */}
                         {isOutOfOrder ? (
                           <button disabled className="w-full py-4 sm:py-5 text-xs sm:text-sm font-black bg-slate-200 text-slate-400 rounded-2xl shadow-sm flex items-center justify-center gap-2 cursor-not-allowed">
                             Venue Unavailable
                           </button>
                         ) : isVipVenue ? (
-                          !isPrivilegedUser ? (
-                            <div className="w-full py-4 sm:py-5 text-[10px] sm:text-xs font-black bg-[#faf8ff] text-[#b181f7] rounded-3xl border border-[#eee4ff] flex items-center justify-center gap-2.5 shadow-sm">
-                              <Crown className="w-4 h-4 text-[#b181f7]" strokeWidth={2.5} />
-                              <span className="uppercase tracking-[0.08em] font-black">VIP Exclusive Facility</span>
-                            </div>
-                          ) : (
-                            <button onClick={() => navigate('/app#/vip-booking')} className="w-full py-4 sm:py-5 text-xs sm:text-sm font-black bg-[#9333ea] text-white hover:bg-[#7c3aed] transition-all duration-300 rounded-2xl shadow-xl flex items-center justify-center gap-2 group/btn">
-                              <Crown className="w-4 h-4" /> Book as VIP Manager <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                            </button>
-                          )
+                          <button onClick={() => navigate(`/book?venueId=${venue.id}`)} className="w-full py-4 sm:py-5 text-xs sm:text-sm font-black bg-[#9333ea] text-white hover:bg-[#7c3aed] transition-all duration-300 rounded-2xl shadow-xl flex items-center justify-center gap-2 group/btn">
+                            <Crown className="w-4 h-4" /> Book VIP Facility <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                          </button>
                         ) : (
                           <button onClick={() => navigate(`/book?venueId=${venue.id}`)} className="w-full py-4 sm:py-5 text-xs sm:text-sm font-black bg-[#111827] text-white hover:bg-[#268053] transition-all duration-300 rounded-2xl shadow-xl flex items-center justify-center gap-2 group/btn">
                             Book This Venue <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
