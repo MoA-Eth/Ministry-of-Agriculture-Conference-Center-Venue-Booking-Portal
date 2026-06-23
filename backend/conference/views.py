@@ -415,7 +415,8 @@ class BookingViewSet(viewsets.ModelViewSet):
 
             neighbors = Booking.objects.filter(
                 venue=venue,
-                status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'],
+                # Buffer only enforced for confirmed/paid bookings — not pending requests
+                status__in=['partial_paid', 'paid', 'approved', 'completed'],
                 start_date__lte=buf_end_date,
                 end_date__gte=buf_start_date,
             )
