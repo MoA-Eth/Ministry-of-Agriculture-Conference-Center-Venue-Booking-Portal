@@ -98,6 +98,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const isPrivilegedUser = ['leadership', 'system_admin', 'event_management'].includes(user?.role || '');
   const availableVenues = venues || [];
@@ -401,6 +402,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     if (isSubmitting) return;
     setIsSubmitting(true);
     setSubmitError(null);
+    setUploadProgress(null);
     try {
       const finalTotal = venueTotal + serviceFee;
 
@@ -440,7 +442,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
         support_services: form.supportServices,
       };
 
-      const data = await addBooking(payload);
+      const data = await addBooking(payload, (pct) => setUploadProgress(pct));
       setSubmittedBookingId(data.id || 'SUCCESS');
     } catch (err: any) {
       const msg = err?.message || 'Submission failed. Please try again.';
@@ -449,6 +451,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -843,11 +846,37 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 })}
               </div>
               <div onClick={() => document.getElementById('contract-upload')?.click()} className="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 transition-all group shadow-inner">
-                <input id="contract-upload" type="file" className="hidden" accept=".pdf" onChange={(e) => e.target.files?.[0] && setForm(p => ({ ...p, letterAttachment: e.target.files![0] }))} />
+                <input
+                  id="contract-upload"
+                  type="file"
+                  className="hidden"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const maxBytes = 10 * 1024 * 1024; // 10 MB
+                    if (file.size > maxBytes) {
+                      toast.error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please attach a PDF under 10 MB.`);
+                      e.target.value = '';
+                      return;
+                    }
+                    setForm(p => ({ ...p, letterAttachment: file }));
+                  }}
+                />
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
                   <Paperclip className="w-8 h-8 text-slate-400 group-hover:text-emerald-500 transition-colors" />
                 </div>
-                <p className="text-sm font-black text-slate-600 uppercase tracking-widest">{form.letterAttachment ? form.letterAttachment.name : 'Attach Official Request (PDF)'}</p>
+                {form.letterAttachment ? (
+                  <div>
+                    <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">{form.letterAttachment.name}</p>
+                    <p className="text-xs font-bold text-slate-400 mt-1">{(form.letterAttachment.size / 1024 / 1024).toFixed(2)} MB · PDF</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-black text-slate-600 uppercase tracking-widest">Attach Official Request (PDF)</p>
+                    <p className="text-xs font-medium text-slate-400 mt-1">Max file size: 10 MB</p>
+                  </div>
+                )}
                 <p className="text-xs font-medium text-black mt-2 uppercase tracking-widest">Required for Internal organizers</p>
               </div>
               <div className="flex justify-between pt-6 border-t border-slate-100">
@@ -913,11 +942,30 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   <div className="flex items-start gap-3 bg-red-50 border-2 border-red-300 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-300">
                     <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-black text-red-700 uppercase tracking-wide mb-1">Booking Rejected</p>
+                      <p className="text-sm font-black text-red-700 uppercase tracking-wide mb-1">Submission Failed</p>
                       <p className="text-sm text-red-600 font-medium leading-relaxed">{submitError}</p>
                     </div>
                   </div>
                 )}
+
+                {/* Upload progress bar */}
+                {isSubmitting && uploadProgress !== null && (
+                  <div className="space-y-2 animate-in fade-in duration-300">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        {uploadProgress < 100 ? 'Uploading attachment...' : 'Processing request...'}
+                      </span>
+                      <span className="text-[10px] font-black text-emerald-600">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#1b5e3a] to-[#268053] rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between w-full">
                   <button onClick={() => setCurrentStep(3)} className="font-black text-slate-400 hover:text-slate-600 uppercase text-xs tracking-widest transition-colors">Back</button>
                   <Button 
@@ -928,7 +976,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                     {isSubmitting ? (
                       <span className="flex items-center gap-3">
                         <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
-                        SUBMITTING...
+                        {uploadProgress !== null && uploadProgress < 100 ? `UPLOADING ${uploadProgress}%` : 'SUBMITTING...'}
                       </span>
                     ) : 'SUBMIT REQUEST'}
                   </Button>

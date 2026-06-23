@@ -227,21 +227,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
         if (currentToken) headers['Authorization'] = `Token ${currentToken}`;
 
-        const bookingsUrl = currentToken ? `${API_BASE}/bookings/` : `${API_BASE}/bookings/?public=true`;
-
-        // FIX: Fetch ALL core data simultaneously, regardless of login status!
+        // Always fetch public bookings so the calendar is consistent for
+        // both guests and logged-in organizers. If logged in, also fetch
+        // the user's own private bookings so they can see their own details.
+        const publicHeaders: HeadersInit = { 'Content-Type': 'application/json' };
         const fetchPromises: any[] = [
-          fetch(bookingsUrl, { headers }),
+          fetch(`${API_BASE}/bookings/?public=true`, { headers: publicHeaders }), // always public
           fetch(`${API_BASE}/venues/`, { headers }),
           fetch(`${API_BASE}/technical-services/`, { headers }),
           fetch(`${API_BASE}/support-services/`, { headers }),
-          ...(currentToken ? [fetch(`${API_BASE}/audit-logs/`, { headers })] : [])
+          ...(currentToken ? [
+            fetch(`${API_BASE}/bookings/`, { headers }),          // own bookings
+            fetch(`${API_BASE}/audit-logs/`, { headers }),
+          ] : [])
         ];
 
         const responses = await Promise.all(fetchPromises);
 
-        // Check if any response is 401 (Unauthorized)
-        if (responses.some(r => r.status === 401)) {
+        // Check if any authenticated response is 401 (Unauthorized)
+        const authResponses = currentToken ? responses.slice(4) : [];
+        if (authResponses.some((r: any) => r.status === 401)) {
           console.warn("Unauthorized access detected. Clearing invalid token.");
           setToken(null);
           setUser(null);
@@ -250,18 +255,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const bData = await responses[0].json();
-        const vData = await responses[1].json();
-        const tData = await responses[2].json();
-        const sData = await responses[3].json();
-        const aData = currentToken ? await responses[4].json() : [];
+        const publicBData = await responses[0].json();
+        const vData       = await responses[1].json();
+        const tData       = await responses[2].json();
+        const sData       = await responses[3].json();
+        const ownBData    = currentToken ? await responses[4].json() : null;
+        const aData       = currentToken ? await responses[5].json() : [];
 
         const safeArray = (data: any) => Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
-        
-        const rawBookings = safeArray(bData).map(mapBooking);
 
-        // PRIVACY SHIELD
-        const securedBookings = rawBookings.map((b: Booking) => {
+        const publicBookings = safeArray(publicBData).map(mapBooking);
+        const ownBookings    = ownBData ? safeArray(ownBData).map(mapBooking) : [];
+
+        // Merge: start with public, then overlay with own bookings (which have full detail)
+        const ownIds = new Set(ownBookings.map((b: Booking) => b.id));
+        const mergedRaw: Booking[] = [
+          ...publicBookings.filter((b: Booking) => !ownIds.has(b.id)),
+          ...ownBookings,
+        ];
+
+        // PRIVACY SHIELD – hide other people's details from organizer view
+        const securedBookings = mergedRaw.map((b: Booking) => {
           const isAdmin = role !== 'organizer';
           const isMyBooking = user && (
             b.userId?.toString() === user.id?.toString() ||
@@ -311,7 +325,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return prices;
   }, [technicalServices, supportServices]);
 
-  const addBooking = useCallback(async (form: any) => {
+  const addBooking = useCallback(async (form: any, onProgress?: (pct: number) => void) => {
     try {
       const formData = new FormData();
       formData.append('venue', form.venueId || form.venue);
@@ -349,31 +363,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         formData.append('letter_attachment', form.letterAttachment);
       }
 
-      const res = await fetch(`${API_BASE}/bookings/`, {
-        method: 'POST',
-        headers: getHeaders(false),
-        body: formData,
-      });
+      // ── Use XHR so we get real upload-progress events ──────────────────
+      const responseData = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_BASE}/bookings/`);
 
-      const responseData = await res.json();
+        // Auth header (no Content-Type — browser sets multipart boundary automatically)
+        const hdrs = getHeaders(false);
+        Object.entries(hdrs).forEach(([k, v]) => {
+          if (k.toLowerCase() !== 'content-type') xhr.setRequestHeader(k, v as string);
+        });
 
-      if (!res.ok) {
-        let errMsg = 'Failed to submit booking';
-        if (responseData) {
-          if (typeof responseData === 'string') {
-            errMsg = responseData;
-          } else if (responseData.detail) {
-            errMsg = responseData.detail;
-          } else if (responseData.error) {
-            errMsg = responseData.error;
-          } else {
-            const firstField = Object.keys(responseData)[0];
-            const firstErr = responseData[firstField];
-            errMsg = `${firstField.replace(/_/g, ' ')}: ${Array.isArray(firstErr) ? firstErr[0] : firstErr}`;
+        // Progress events
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable && onProgress) {
+            onProgress(Math.round((e.loaded / e.total) * 100));
           }
-        }
-        throw new Error(errMsg);
-      }
+        });
+
+        xhr.addEventListener('load', () => {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(data);
+            } else {
+              let errMsg = 'Failed to submit booking';
+              if (data) {
+                if (typeof data === 'string') errMsg = data;
+                else if (data.detail) errMsg = data.detail;
+                else if (data.error) errMsg = data.error;
+                else {
+                  const firstField = Object.keys(data)[0];
+                  const firstErr = data[firstField];
+                  errMsg = `${firstField.replace(/_/g, ' ')}: ${Array.isArray(firstErr) ? firstErr[0] : firstErr}`;
+                }
+              }
+              reject(new Error(errMsg));
+            }
+          } catch {
+            reject(new Error('Invalid server response'));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Failed to fetch')));
+        xhr.addEventListener('timeout', () => reject(new Error('Request timed out. Please try a smaller file or check your connection.')));
+        xhr.timeout = 120000; // 2-minute timeout
+
+        xhr.send(formData);
+      });
 
       toast.success('Booking request submitted successfully!');
       refreshData();
