@@ -63,7 +63,7 @@ export default function BookingsList() {
       case 'completed':
         return { color: 'text-emerald-700', bg: 'bg-emerald-100', icon: <CheckCircle2 size={16} />, label: 'Confirmed (Paid)' };
       case 'partial_paid':
-        return { color: 'text-blue-700', bg: 'bg-blue-100', icon: <Clock3 size={16} />, label: '1st Round Paid' };
+        return { color: 'text-blue-700', bg: 'bg-blue-100', icon: <Clock3 size={16} />, label: 'Advance Paid' };
       case 'approved':
         return { color: 'text-purple-700', bg: 'bg-purple-100', icon: <CheckCircle2 size={16} />, label: 'VIP Approved' };
       case 'rejected':

@@ -60,7 +60,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved: '#3b82f6',     // Blue (Awaiting Payment)
   confirmed: '#059669',    // Emerald (Paid)
   paid: '#059669',         // Emerald (Paid)
-  partial_paid: '#10b981', // Light Emerald (1st Round)
+  partial_paid: '#10b981', // Light Emerald (Advance)
   override: '#8b5cf6',     // Violet
   reserved: '#f59e0b',     // Amber (Pending)
   rejected: '#ef4444',     // Red
@@ -88,7 +88,7 @@ function StatusBadge({ status }: { status: BookingStatus }) {
     approved: { label: 'Awaiting Payment', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: <Clock size={14} /> },
     paid: { label: 'Fully Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={14} /> },
     confirmed: { label: 'Confirmed', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={14} /> },
-    partial_paid: { label: '1st Round Paid', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: <Activity size={14} /> },
+    partial_paid: { label: 'Advance Paid', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: <Activity size={14} /> },
     override: { label: 'VIP Override', color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', icon: <Star size={14} /> },
     rejected: { label: 'Rejected', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', icon: <XCircle size={14} /> },
     cancelled: { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-200', icon: <AlertCircle size={14} /> },
@@ -978,10 +978,8 @@ export default function Dashboard() {
 
                 return (
                   <div key={b.id} onClick={(e) => { 
-                    if (role !== 'leadership') {
-                      e.stopPropagation(); setActiveBooking(b); 
-                    }
-                  }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 ${role !== 'leadership' ? 'group cursor-pointer' : ''} border ${isConflict ? 'bg-red-50/50 border-red-100 ' + (role !== 'leadership' ? 'hover:border-red-200' : '') : 'bg-[#f8fafc] border-transparent ' + (role !== 'leadership' ? 'hover:bg-white hover:shadow-xl hover:border-emerald-100' : '')}`}>
+                    e.stopPropagation(); setActiveBooking(b); 
+                  }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 group cursor-pointer border ${isConflict ? 'bg-red-50/50 border-red-100 hover:border-red-200' : 'bg-[#f8fafc] border-transparent hover:bg-white hover:shadow-xl hover:border-emerald-100'}`}>
                     <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border-b-4 ${isUrgent ? 'bg-amber-100 text-amber-600 border-amber-500/20' : 'bg-emerald-100 text-emerald-600 border-emerald-500/20'}`}>
                       <span className="text-[9px] font-black uppercase leading-none mb-0.5">{eth.month}</span>
                       <span className="text-xl font-black leading-none">{eth.day}</span>

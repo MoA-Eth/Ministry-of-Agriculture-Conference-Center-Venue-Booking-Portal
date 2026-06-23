@@ -11,7 +11,7 @@ const statusStyles: Record<string, { bg: string, text: string, label: string, do
   pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Awaiting MoA Approval', dot: 'bg-amber-500' },
   reserved: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Awaiting MoA Approval', dot: 'bg-amber-500' },
   management_approved: { bg: 'bg-teal-50', text: 'text-teal-700', label: 'MoA Approved (Awaiting Payment)', dot: 'bg-teal-500' },
-  partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: '1st Round Paid', dot: 'bg-blue-500' },
+  partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Advance Paid', dot: 'bg-blue-500' },
   approved: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'VIP Approved', dot: 'bg-purple-500' },
   confirmed: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Confirmed', dot: 'bg-emerald-500' },
   paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Fully Paid', dot: 'bg-emerald-500' },

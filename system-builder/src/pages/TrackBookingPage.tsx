@@ -43,7 +43,7 @@ export default function TrackBookingPage() {
       case 'completed':
         return { label: 'Confirmed (Paid)', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
       case 'partial_paid':
-        return { label: '1st Round Paid', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+        return { label: 'Advance Paid', color: 'bg-blue-100 text-blue-700 border-blue-200' };
       case 'management_approved':
         return { label: 'MoA Approved', color: 'bg-teal-100 text-teal-700 border-teal-200' };
       case 'approved':

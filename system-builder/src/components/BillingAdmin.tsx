@@ -33,7 +33,7 @@ export default function BillingAdmin() {
       case 'paid': 
       case 'confirmed': return { label: 'Fully Paid', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
       case 'completed': return { label: 'Settled', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
-      case 'partial_paid': return { label: '1st Round Paid', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+      case 'partial_paid': return { label: 'Advance Paid', color: 'bg-blue-100 text-blue-700 border-blue-200' };
       case 'approved': return { label: 'Awaiting Payment', color: 'bg-amber-100 text-amber-700 border-amber-200' };
       case 'reserved':
       case 'pending': return { label: 'Pending Quote', color: 'bg-slate-100 text-slate-700 border-slate-200' };

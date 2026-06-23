@@ -103,7 +103,7 @@ class SupportService(models.Model):
 class BookingStatus(models.TextChoices):
     PENDING = 'pending', 'Pending / Awaiting Action'
     MANAGEMENT_APPROVED = 'management_approved', 'Approved by MoA Management'
-    PARTIAL_PAID = 'partial_paid', '1st Round Paid'
+    PARTIAL_PAID = 'partial_paid', 'Advance Paid'
     PAID = 'paid', 'Fully Paid'
     APPROVED = 'approved', 'VIP Approved'
     REJECTED = 'rejected', 'Rejected (e.g. VIP Override)'
@@ -253,7 +253,7 @@ class EmailTemplate(models.Model):
         ('pending', 'Booking Received (Pending)'),
         ('management_approved', 'Approved by MoA Management'),
         ('management_rejected', 'Rejected by MoA Management'),
-        ('partial_paid', '1st Round Payment Confirmed'),
+        ('partial_paid', 'Advance Payment Confirmed'),
         ('paid', 'Full Payment Confirmed'),
         ('approved', 'VIP Override Approved'),
         ('rejected', 'Booking Rejected / Overridden'),

@@ -26,11 +26,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='booking',
             name='status',
-            field=models.CharField(choices=[('pending', 'Pending / Awaiting Action'), ('management_approved', 'Approved by MoA Management'), ('partial_paid', '1st Round Paid'), ('paid', 'Fully Paid'), ('approved', 'VIP Approved'), ('rejected', 'Rejected (e.g. VIP Override)'), ('cancelled', 'Cancelled by User/Admin'), ('completed', 'Completed')], default='pending', max_length=20),
+            field=models.CharField(choices=[('pending', 'Pending / Awaiting Action'), ('management_approved', 'Approved by MoA Management'), ('partial_paid', 'Advance Paid'), ('paid', 'Fully Paid'), ('approved', 'VIP Approved'), ('rejected', 'Rejected (e.g. VIP Override)'), ('cancelled', 'Cancelled by User/Admin'), ('completed', 'Completed')], default='pending', max_length=20),
         ),
         migrations.AlterField(
             model_name='emailtemplate',
             name='trigger',
-            field=models.CharField(choices=[('pending', 'Booking Received (Pending)'), ('management_approved', 'Approved by MoA Management'), ('partial_paid', '1st Round Payment Confirmed'), ('paid', 'Full Payment Confirmed'), ('approved', 'VIP Override Approved'), ('rejected', 'Booking Rejected / Overridden'), ('cancelled', 'Booking Cancelled'), ('completed', 'Event Completed'), ('reminder_24h', '24h Event Reminder'), ('reminder_48h_pay', '48h Payment Expiration'), ('last_day', 'Meeting Conclusion')], max_length=50, unique=True),
+            field=models.CharField(choices=[('pending', 'Booking Received (Pending)'), ('management_approved', 'Approved by MoA Management'), ('partial_paid', 'Advance Payment Confirmed'), ('paid', 'Full Payment Confirmed'), ('approved', 'VIP Override Approved'), ('rejected', 'Booking Rejected / Overridden'), ('cancelled', 'Booking Cancelled'), ('completed', 'Event Completed'), ('reminder_24h', '24h Event Reminder'), ('reminder_48h_pay', '48h Payment Expiration'), ('last_day', 'Meeting Conclusion')], max_length=50, unique=True),
         ),
     ]

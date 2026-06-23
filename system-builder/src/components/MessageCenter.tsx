@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 // Make triggers look professional in the UI
 const triggerLabels: Record<string, string> = {
   pending: 'Booking Received',
-  partial_paid: '1st Round Paid',
+  partial_paid: 'Advance Paid',
   paid: 'Fully Paid (Confirmed)',
   approved: 'VIP Approved',
   rejected: 'Rejected / Overridden',

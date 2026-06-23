@@ -27,7 +27,7 @@ const getEthDateString = (gregStr: string) => {
 const adminStatusConfig = {
   pending: { label: 'Pending Action', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', borderLeft: 'border-l-amber-500', icon: <Clock3 size={12} className="shrink-0 text-amber-600" /> },
   management_approved: { label: 'MoA Approved', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', borderLeft: 'border-l-teal-500', icon: <CheckCircle2 size={12} className="shrink-0 text-teal-600" /> },
-  partial_paid: { label: '1st Round Paid', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', borderLeft: 'border-l-blue-500', icon: <Clock size={12} className="shrink-0 text-blue-600" /> },
+  partial_paid: { label: 'Advance Paid', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', borderLeft: 'border-l-blue-500', icon: <Clock size={12} className="shrink-0 text-blue-600" /> },
   paid: { label: 'Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', borderLeft: 'border-l-[#268053]', icon: <CheckCircle2 size={12} className="shrink-0 text-emerald-600" /> },
   approved: { label: 'VIP Override', color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', borderLeft: 'border-l-purple-500', icon: <Star size={12} className="shrink-0 text-purple-600" /> },
   completed: { label: 'Completed', color: 'text-slate-800', bg: 'bg-slate-200', border: 'border-slate-400', borderLeft: 'border-l-slate-600', icon: <CheckCircle2 size={12} className="shrink-0 text-slate-600" /> },
@@ -236,6 +236,8 @@ export default function CalendarView() {
      return { day, gregDate };
   });
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
   return (
     <div className="pb-12" style={{ animation: 'fade-in-up 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
       
@@ -263,7 +265,7 @@ export default function CalendarView() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
               <span className="flex items-center gap-1.5 text-amber-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500" /> Pending</span>
               <span className="flex items-center gap-1.5 text-teal-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-teal-500" /> MoA Approved</span>
-              <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> 1st Round Paid</span>
+              <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> Advance Paid</span>
               <span className="flex items-center gap-1.5 text-emerald-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#268053]" /> Fully Paid</span>
               <span className="flex items-center gap-1.5 text-purple-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-purple-500" /> VIP</span>
             </div>
@@ -330,9 +332,11 @@ export default function CalendarView() {
               
               {calendarDays.map(({ day, gregDate }) => {
                  const dateStr = format(gregDate, 'yyyy-MM-dd');
+                 const isPastDay = dateStr < todayStr;
                  
                  // Find bookings for this box
                  const dayBookings = bookings.filter(b => {
+                    if (isPastDay) return false;
                     let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
                     if (b.dailySchedules?.length) matchesDate = b.dailySchedules.some(s => s.date === dateStr);
                     const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
@@ -341,13 +345,16 @@ export default function CalendarView() {
                  });
 
                  return (
-                   <div key={day} className="min-h-[120px] sm:min-h-[160px] bg-white p-1.5 sm:p-2 flex flex-col transition-colors group">
+                   <div
+                     key={day}
+                     className={`min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 flex flex-col transition-colors group ${isPastDay ? 'bg-slate-50' : 'bg-white'}`}
+                   >
                      <div className="flex justify-end mb-1 sm:mb-2">
-                       <span className="text-xs sm:text-sm font-black text-slate-400 group-hover:text-slate-800 transition-colors">{day}</span>
+                       <span className={`text-xs sm:text-sm font-black transition-colors ${isPastDay ? 'text-slate-300' : 'text-slate-400 group-hover:text-slate-800'}`}>{day}</span>
                      </div>
                      
                      <div className="flex-1 space-y-1 sm:space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
-                       {dayBookings.map(b => {
+                       {!isPastDay && dayBookings.map(b => {
                           const cfg = getStatusProps(b.status, isAdmin);
                           const venueInfo = venues.find(v => v.id?.toString() === b.venueId?.toString());
                           const venueName = venueInfo?.name || 'Unknown Venue';

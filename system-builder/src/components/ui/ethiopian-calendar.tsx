@@ -116,12 +116,12 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
 
       let className = "h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all relative ";
 
-      if (booked) {
+      if (past && !allowPast) {
+        className += "bg-slate-50 text-slate-300 cursor-not-allowed line-through opacity-60";
+      } else if (booked) {
         className += "bg-red-50 text-red-600 cursor-pointer border border-red-200 hover:bg-red-100";
       } else if (partialBooked) {
         className += "bg-blue-50 text-blue-600 cursor-pointer border border-blue-200 hover:bg-blue-100";
-      } else if (past && !allowPast) {
-        className += "bg-slate-50 text-slate-300 cursor-not-allowed line-through opacity-60";
       } else if (selectedState) {
         className += "bg-[#268053] text-white shadow-md transform scale-110 z-10 font-bold";
       } else if (today) {

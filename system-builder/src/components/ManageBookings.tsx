@@ -16,7 +16,7 @@ import { Booking } from '@/lib/types';
 const statusStyles: Record<string, { bg: string, text: string, label: string, dot: string }> = {
   pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending MoA Approval', dot: 'bg-amber-500' },
   management_approved: { bg: 'bg-teal-50', text: 'text-teal-700', label: 'MoA Approved', dot: 'bg-teal-500' },
-  partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: '1st Round Paid', dot: 'bg-blue-500' },
+  partial_paid: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Advance Paid', dot: 'bg-blue-500' },
   paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Fully Paid', dot: 'bg-emerald-500' },
   approved: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'VIP Approved', dot: 'bg-purple-500' },
   rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected', dot: 'bg-red-500' },
@@ -156,7 +156,7 @@ export default function ManageBookings() {
     e?.stopPropagation();
     const targetBooking = bookings.find(b => String(b.id) === String(id));
 
-    // --- UPGRADED CLASH ENGINE: Triggers for 1st Round, Full Pay, and VIP ---
+    // --- UPGRADED CLASH ENGINE: Triggers for Advance, Full Pay, and VIP ---
     if (targetBooking && ['partial_paid', 'paid', 'approved'].includes(status)) {
       const clashingBooking = bookings.find(other => {
         // Don't compare the booking to itself
@@ -198,7 +198,7 @@ export default function ManageBookings() {
     }
 
     let msg = `Change status to ${status}?`;
-    if (status === 'partial_paid') msg = 'Confirm 1st Round Payment received?';
+    if (status === 'partial_paid') msg = 'Confirm Advance Payment received?';
     if (status === 'paid') msg = 'Confirm Full Payment received?';
     if (status === 'approved') msg = 'Approve VIP Override? WARNING: This will immediately REJECT any conflicting standard bookings.';
 
@@ -371,7 +371,7 @@ export default function ManageBookings() {
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending Review</option>
-              <option value="partial_paid">1st Round Paid</option>
+              <option value="partial_paid">Advance Paid</option>
               <option value="paid">Confirmed (Fully Paid)</option>
               <option value="approved">VIP Approved</option>
               <option value="completed">Completed</option>
@@ -431,7 +431,7 @@ export default function ManageBookings() {
           >
             {tab === 'action' ? 'Awaiting MoA Approval' :
               tab === 'mgmt_approved' ? 'MoA Approved' :
-                tab === 'partial' ? '1st Round Paid' :
+                tab === 'partial' ? 'Advance Paid' :
                   tab === 'confirmed' ? 'Fully Paid' :
                     tab === 'vip' ? 'VIP Approved' :
                       tab === 'rejected' ? 'Rejected' : 'All Bookings'}
@@ -627,7 +627,7 @@ export default function ManageBookings() {
                               onClick={(e) => handleStatusChange(safeId, 'partial_paid', e)}
                             >
                               {pendingActionId === `${safeId}-partial_paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
-                              {pendingActionId === `${safeId}-partial_paid` ? 'Processing...' : 'Confirm 1st Round'}
+                              {pendingActionId === `${safeId}-partial_paid` ? 'Processing...' : 'Confirm Advance'}
                             </Button>
                             <Button
                               disabled={pendingActionId !== null}
@@ -844,7 +844,7 @@ export default function ManageBookings() {
                             <span>Payment Status:</span>
                             <span className="font-bold">
                               {statusLower === 'paid' ? 'FULLY PAID' :
-                                statusLower === 'partial_paid' ? '1ST ROUND PAID' :
+                                statusLower === 'partial_paid' ? 'ADVANCE PAID' :
                                   statusLower === 'approved' ? 'VIP (WAIVED)' :
                                     'PENDING'}
                             </span>
