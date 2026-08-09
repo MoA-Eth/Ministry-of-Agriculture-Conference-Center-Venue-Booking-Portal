@@ -7,8 +7,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useApp, API_BASE, mapBooking } from '@/lib/app-context';
 import { format, isSameDay, isAfter, isBefore, parseISO } from 'date-fns';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
-import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
 import moaLogo from '@/assets/moa-logo.png';
 import { Booking } from '@/lib/types';
 
@@ -18,27 +16,25 @@ const HERO_IMAGES = Object.entries(heroModules)
   .filter(([path]) => !path.toLowerCase().includes('moa-logo.png') && !path.toLowerCase().includes('moa logo.png'))
   .map(([_, mod]: any) => mod.default);
 
-// Helper to display Gregorian date strings (YYYY-MM-DD) as Ethiopian dates
-const getEthDateString = (gregStr: string) => {
+// Helper to display Gregorian date strings (YYYY-MM-DD) in standard format
+const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0);
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
   }
 };
 
-// Simple helper for full Ethiopian date (e.g. "Meskerem 1")
-const getFullEthDate = (gregStr: string) => {
+// Simple helper for short date display
+const getShortGregDate = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0);
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}`;
+    return format(gDate, 'MMM d');
   } catch {
     return gregStr;
   }
@@ -77,10 +73,10 @@ function EventDetailsModal({ booking, venueName, onClose, toEthTime }: EventDeta
         <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ethiopian Date</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</p>
               <div className="flex items-center gap-2 text-slate-900 font-bold">
                 <CalendarIcon size={14} className="text-emerald-600 shrink-0" />
-                <span className="text-xs sm:text-sm truncate">{getEthDateString(booking.startDate)}</span>
+                <span className="text-xs sm:text-sm truncate">{getGregDateString(booking.startDate)}</span>
               </div>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
@@ -206,7 +202,7 @@ function ScheduleCarousel({ bookings, onSelect, toEthTime }: ScheduleCarouselPro
                   className="w-full flex items-center justify-between bg-slate-50/50 px-3 py-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all active:scale-[0.98] group/item"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-bold text-slate-700 group-hover/item:text-emerald-700 truncate">{getFullEthDate(b.startDate)}</span>
+                    <span className="text-xs font-bold text-slate-700 group-hover/item:text-emerald-700 truncate">{getShortGregDate(b.startDate)}</span>
                   </div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight group-hover/item:text-emerald-600 flex items-center gap-1.5 shrink-0">
                     <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] ${isConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -824,9 +820,26 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-center sm:text-left">© {new Date().getFullYear()} MoA Ethiopia. All rights reserved.</p>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 sm:gap-6">
               <a href="/privacy-policy" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }} className="text-slate-400 hover:text-emerald-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors">
                 Privacy Policy
+              </a>
+              <span className="text-slate-700 text-xs hidden sm:inline">•</span>
+              <a 
+                href="https://amanuel-tarekegn.page.gd/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open('https://amanuel-tarekegn.page.gd/', '_blank', 'noopener,noreferrer');
+                }}
+                className="relative z-10 cursor-pointer pointer-events-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/90 hover:bg-emerald-900/90 border border-slate-700 hover:border-emerald-500/80 text-slate-300 hover:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-emerald-900/40 hover:scale-105 active:scale-95 group"
+              >
+                <span className="text-slate-400 group-hover:text-slate-200">Developer:</span>
+                <span className="text-emerald-400 group-hover:text-emerald-300 font-extrabold flex items-center gap-1">
+                  Amanuel Tarekegn
+                  <ArrowUpRight size={14} className="shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </span>
               </a>
             </div>
           </div>

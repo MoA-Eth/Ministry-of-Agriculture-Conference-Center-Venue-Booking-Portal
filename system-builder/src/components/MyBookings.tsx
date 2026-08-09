@@ -5,7 +5,7 @@ import { venues } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Calendar, Users, MapPin, Edit, Trash2, Lock, XCircle, CheckCircle2 } from 'lucide-react';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { format } from 'date-fns';
 
 const statusStyles: Record<string, { bg: string, text: string, label: string, dot: string }> = {
   pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Awaiting MoA Approval', dot: 'bg-amber-500' },
@@ -21,15 +21,12 @@ const statusStyles: Record<string, { bg: string, text: string, label: string, do
   completed: { bg: 'bg-slate-800', text: 'text-white', label: 'Completed', dot: 'bg-white' },
 };
 
-const ethMonths = ["Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit", "Megabit", "Miazia", "Genbot", "Sene", "Hamle", "Nehase", "Puagme"];
-
-const toEthDateString = (gStr: string | undefined | null) => {
+const toGregDateString = (gStr: string | undefined | null) => {
   if (!gStr) return 'TBD';
   try {
     const [y, m, d] = gStr.split('T')[0].split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ethMonths[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gStr;
   }
@@ -147,8 +144,8 @@ export default function MyBookings() {
                     <h3 className="text-2xl font-black text-slate-800">{title}</h3>
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-600 font-medium">
                       <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-400" /> <span className="font-bold">{venue?.name || 'Venue TBD'}</span></div>
-                      <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-slate-400" /><span className="font-bold text-[#268053]">{startDate === endDate ? toEthDateString(startDate) : `${toEthDateString(startDate).split(',')[0]} - ${toEthDateString(endDate)}`}</span></div>
-                      <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-slate-400" /><span className="font-bold">{toEthTime(startTime)}</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-slate-400" /><span className="font-bold text-[#268053]">{startDate === endDate ? toGregDateString(startDate) : `${toGregDateString(startDate)} – ${toGregDateString(endDate)}`}</span></div>
+                      <div className="flex items-center gap-2"><Users className="w-4 h-4 text-slate-400" /><span className="font-bold">{toEthTime(startTime)}</span></div>
                       <div className="flex items-center gap-2"><Users className="w-4 h-4 text-slate-400" /> <span className="font-bold">{pax} Max</span></div>
                     </div>
                   </div>

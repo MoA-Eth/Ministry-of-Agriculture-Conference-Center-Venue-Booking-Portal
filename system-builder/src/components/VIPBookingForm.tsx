@@ -5,9 +5,8 @@ import { DailySchedule } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, eachDayOfInterval, startOfDay } from 'date-fns';
-import { Paperclip, Star, AlertTriangle, UserPlus, Info, Loader2, ArrowRight, Phone, Coffee, Utensils } from 'lucide-react';
-import { EthiopianCalendar, ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { Paperclip, Star, AlertTriangle, UserPlus, Info, Loader2, ArrowRight, Phone, Coffee, Utensils, FileText } from 'lucide-react';
+import { EthiopianCalendar } from '@/components/ui/ethiopian-calendar';
 
 const steps = [
   { num: 1, label: 'VIP DETAILS' },
@@ -77,13 +76,11 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
   const [submittedBookingId, setSubmittedBookingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getEthDateString = (gregStr: string) => {
+  const getGregDateString = (gregStr: string) => {
     if (!gregStr) return '';
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
-      const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-      const ethDate = EthDateTime.fromEuropeanDate(gDate);
-      return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+      return format(new Date(y, m - 1, d, 12, 0, 0), 'MMM d, yyyy');
     } catch { return gregStr; }
   };
 
@@ -475,14 +472,14 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                  <div>
                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Start Date</label>
                    <div className={`px-4 py-3 bg-white border rounded-lg text-sm font-bold ${errors.startDate ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-200 text-slate-700'}`}>
-                     {form.startDate ? getEthDateString(form.startDate) : '...'}
+                     {form.startDate ? getGregDateString(form.startDate) : '...'}
                    </div>
                    {errors.startDate && <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-1 text-center">{errors.startDate}</p>}
                  </div>
                  <div>
                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">End Date</label>
                    <div className={`px-4 py-3 bg-white border rounded-lg text-sm font-bold ${errors.startDate ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-200 text-slate-700'}`}>
-                     {form.endDate ? getEthDateString(form.endDate) : '...'}
+                     {form.endDate ? getGregDateString(form.endDate) : '...'}
                    </div>
                  </div>
                </div>
@@ -500,7 +497,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
               
               return (
                 <div key={schedule.date} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-100 p-4 rounded-xl bg-slate-50">
-                  <span className="font-bold text-sm text-slate-700">{getEthDateString(schedule.date)}</span>
+                  <span className="font-bold text-sm text-slate-700">{getGregDateString(schedule.date)}</span>
                   
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
@@ -559,51 +556,88 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
              </div>
 
              <div className="mt-12 p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
-               <div className="flex items-center gap-3 mb-5">
-                 <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
-                   <Coffee size={20} />
-                 </div>
-                 <div>
-                   <p className="text-[11px] font-black uppercase tracking-widest text-slate-800 leading-tight">
-                     Coffee Break Snacks &amp; Lunch Catering
-                   </p>
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-1">
-                     For coffee break snacks and lunch catering, please contact:
-                   </p>
-                 </div>
-               </div>
-               
-               <div className="grid gap-2">
-                 <div className="bg-white border-2 border-slate-50 rounded-xl p-3 flex items-center gap-3 group hover:border-purple-200 transition-all shadow-sm">
-                   <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
-                     <Utensils size={16} />
-                   </div>
-                   <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
-                     <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Mama's Kitchen (MOACC):</span>
-                     <a href="tel:+251911234567" className="bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm">
-                       <Phone size={12} className="shrink-0" />
-                       <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 234 567</span>
-                     </a>
-                   </div>
-                 </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+                    <Coffee size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-800 leading-tight">
+                      Coffee Break Snacks &amp; Lunch Catering
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-1">
+                      Catering Services &amp; Provider Contacts
+                    </p>
+                  </div>
+                </div>
 
-                 <div className="bg-white border-2 border-slate-50 rounded-xl p-3 flex items-center gap-3 group hover:border-purple-200 transition-all shadow-sm">
-                   <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
-                     <Coffee size={16} />
-                   </div>
-                   <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
-                     <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MAO Coffee (MOACC):</span>
-                     <a href="tel:+251911987654" className="bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm">
-                       <Phone size={12} className="shrink-0" />
-                       <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 987 654</span>
-                     </a>
-                   </div>
-                 </div>
-               </div>
-             </div>
+                {/* Catering Services Guidelines Notice */}
+                <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-3.5 space-y-1.5 text-slate-800 mb-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
+                    <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Catering Services Guidelines</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
+                    Please be advised that catering services are neither provided nor coordinated by the Center. Should catering be required for your event, you may directly contact the catering providers available within the MoA premises, including Mama's Kitchen, Mao Coffee, and MoA Café (Shemachochi), to discuss menu options, pricing, and service arrangements. Clients maintain full responsibility for coordinating all catering arrangements directly with their preferred provider.
+                  </p>
+                </div>
+                
+                <div className="grid gap-2">
+                  <div className="bg-white border-2 border-slate-50 rounded-xl p-3 flex items-center gap-3 group hover:border-purple-200 transition-all shadow-sm">
+                    <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
+                      <Utensils size={16} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
+                      <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Mama's Kitchen (MOACC):</span>
+                      <a href="tel:+251911234567" className="bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm">
+                        <Phone size={12} className="shrink-0" />
+                        <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 234 567</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border-2 border-slate-50 rounded-xl p-3 flex items-center gap-3 group hover:border-purple-200 transition-all shadow-sm">
+                    <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
+                      <Coffee size={16} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
+                      <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MAO Coffee (MOACC):</span>
+                      <a href="tel:+251911987654" className="bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm">
+                        <Phone size={12} className="shrink-0" />
+                        <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 987 654</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border-2 border-slate-50 rounded-xl p-3 flex items-center gap-3 group hover:border-purple-200 transition-all shadow-sm">
+                    <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
+                      <Utensils size={16} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
+                      <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MoA Café (Shemachochi):</span>
+                      <a href="tel:+251911888999" className="bg-purple-50 text-purple-700 px-2.5 py-1.5 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-colors shadow-sm">
+                        <Phone size={12} className="shrink-0" />
+                        <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 888 999</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Official Request Letter Requirements Notice */}
+              <div className="bg-gradient-to-r from-purple-50/90 via-slate-50/50 to-purple-50/90 border-2 border-purple-200/80 rounded-2xl p-5 shadow-sm text-slate-800 space-y-2.5 mt-6">
+                <div className="flex items-center gap-2.5 text-purple-950 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100/80 text-purple-700 flex items-center justify-center shrink-0 border border-purple-200">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <span>Official Request Letter Requirements</span>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed font-medium sm:pl-10">
+                  Please note that an official request letter must be submitted on the organization's letterhead and signed by an authorized representative. The letter must explicitly specify the event theme or purpose, the number of participants, the event start and end dates with specific time slots, the selected venue, and any special requirements or requests. Ensuring that complete information is provided initially will help prevent processing delays and subsequent follow-up.
+                </p>
+              </div>
 
              
-             <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center mt-6 cursor-pointer hover:bg-slate-50" onClick={() => document.getElementById('file')?.click()}>
+             <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center mt-4 cursor-pointer hover:bg-slate-50" onClick={() => document.getElementById('file')?.click()}>
                 <input id="file" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
                 <Paperclip className="mx-auto text-slate-400 mb-2" />
                 <p className="text-sm font-bold">{form.letterAttachment ? form.letterAttachment.name : 'Attach Official Mandate (Required)'}</p>

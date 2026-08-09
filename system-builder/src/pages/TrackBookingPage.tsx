@@ -5,8 +5,7 @@ import moaLogo from '@/assets/moa-logo.png';
 import { API_BASE, mapBooking } from '@/lib/app-context';
 import { Booking } from '@/lib/types';
 import { toast } from 'sonner';
-import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { format } from 'date-fns';
 
 export default function TrackBookingPage() {
   const [refId, setRefId] = useState('');
@@ -16,13 +15,12 @@ export default function TrackBookingPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ eventTitle: '', eventDescription: '', organizerPhone: '', participantCount: '' });
 
-  const getEthDateString = (gregStr: string) => {
+  const getGregDateString = (gregStr: string) => {
     if (!gregStr) return '';
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
       const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-      const ethDate = EthDateTime.fromEuropeanDate(gDate);
-      return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+      return format(gDate, 'MMM d, yyyy');
     } catch {
       return gregStr;
     }
@@ -242,8 +240,8 @@ export default function TrackBookingPage() {
                     <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"><Calendar size={14} /> Schedule</p>
                     <p className="text-sm font-bold text-[#268053]">
                       {booking.startDate === booking.endDate 
-                        ? getEthDateString(booking.startDate)
-                        : `${getEthDateString(booking.startDate).split(',')[0]} - ${getEthDateString(booking.endDate)}`}
+                        ? getGregDateString(booking.startDate)
+                        : `${getGregDateString(booking.startDate)} – ${getGregDateString(booking.endDate)}`}
                     </p>
                     <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-1">
                       <Clock size={12} /> {formatTime(booking.startTime)} to {formatTime(booking.endTime)}

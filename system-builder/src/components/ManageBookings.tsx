@@ -8,8 +8,7 @@ import {
   FileText, Activity, Trash2, Star, CreditCard, User, Mail, Phone,
   CheckCircle2, AlertTriangle, Building2, ChevronLeft, ChevronRight, Filter, X, Crown, Search
 } from 'lucide-react';
-import { EthiopianCalendar, ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { GregorianCalendar } from '@/components/ui/ethiopian-calendar';
 import { Booking } from '@/lib/types';
 
 // 1. STATUS STYLES
@@ -26,14 +25,13 @@ const statusStyles: Record<string, { bg: string, text: string, label: string, do
 
 type TabFilter = 'action' | 'mgmt_approved' | 'partial' | 'confirmed' | 'vip' | 'rejected' | 'all';
 
-// --- ETHIOPIAN DATE CONVERTER ---
-const toEthDateString = (gStr: string | undefined | null) => {
+// --- GREGORIAN DATE FORMATTER ---
+const toGregDateString = (gStr: string | undefined | null) => {
   if (!gStr) return 'TBD';
   try {
     const [y, m, d] = gStr.split('T')[0].split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0);
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gStr;
   }
@@ -285,7 +283,7 @@ export default function ManageBookings() {
 
                 <div className="mt-4 pt-4 border-t border-red-200 flex flex-col gap-2 text-sm font-bold text-red-800">
                   <span className="flex items-center gap-2"><Calendar size={16} className="text-red-500" />
-                    {cStartD === cEndD ? toEthDateString(cStartD) : `${toEthDateString(cStartD).split(',')[0]} - ${toEthDateString(cEndD)}`}
+                    {cStartD === cEndD ? toGregDateString(cStartD) : `${toGregDateString(cStartD)} – ${toGregDateString(cEndD)}`}
                   </span>
                   <span className="flex items-center gap-2"><Clock size={16} className="text-red-500" />
                     {cTimeStart} to {cTimeEnd} (Local)
@@ -387,14 +385,14 @@ export default function ManageBookings() {
               className="flex items-center gap-2 w-full sm:w-44 pl-9 pr-4 py-2.5 text-sm font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none hover:bg-slate-100 hover:border-emerald-200 transition-all cursor-pointer"
             >
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <span className="truncate">{filterDate ? toEthDateString(filterDate) : 'Any Date'}</span>
+              <span className="truncate">{filterDate ? toGregDateString(filterDate) : 'Any Date'}</span>
             </div>
 
             {showCalendar && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowCalendar(false)} />
                 <div className="absolute top-full left-0 sm:right-0 sm:left-auto mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 animate-in fade-in slide-in-from-top-2">
-                  <EthiopianCalendar
+                  <GregorianCalendar
                     selected={{ from: filterDate ? parseISO(filterDate) : undefined, to: filterDate ? parseISO(filterDate) : undefined }}
                     onSelect={(r) => {
                       setFilterDate(r?.from ? format(r.from, 'yyyy-MM-dd') : '');
@@ -532,22 +530,24 @@ export default function ManageBookings() {
                 <div className="flex flex-col gap-3">
 
                   {/* Title + status row */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isVipBooking && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
-                        <Crown size={12} /> VIP REQUEST
-                      </span>
-                    )}
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${style.bg} ${style.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} animate-pulse`}></span> {style.label}
-                      {hasAnyConflict && (
-                        <>
-                          <span className="w-1 h-3 border-l border-current/20 ml-1"></span>
-                          <span className="text-red-600 font-black ml-1 uppercase tracking-tighter">Unavailable Resources</span>
-                        </>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isVipBooking && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+                          <Crown size={12} /> VIP REQUEST
+                        </span>
                       )}
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate group-hover:text-[#268053] transition-colors flex-1 min-w-0">{title}</h3>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${style.bg} ${style.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${style.dot} animate-pulse`}></span> {style.label}
+                        {hasAnyConflict && (
+                          <>
+                            <span className="w-1 h-3 border-l border-current/20 ml-1"></span>
+                            <span className="text-red-600 font-black ml-1 uppercase tracking-tighter">Unavailable Resources</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 break-words group-hover:text-[#268053] transition-colors leading-snug w-full mt-0.5">{title}</h3>
                   </div>
 
                   {/* Meta info */}
@@ -558,8 +558,8 @@ export default function ManageBookings() {
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
                       <span>
                         {startDate === endDate
-                          ? toEthDateString(startDate)
-                          : `${toEthDateString(startDate).split(',')[0]} – ${toEthDateString(endDate)}`}
+                          ? toGregDateString(startDate)
+                          : `${toGregDateString(startDate)} – ${toGregDateString(endDate)}`}
                       </span>
                     </div>
 
@@ -799,7 +799,7 @@ export default function ManageBookings() {
                           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2 max-h-32 overflow-y-auto custom-scrollbar">
                             {(b.daily_schedules || b.dailySchedules).map((ds: any, dIdx: number) => (
                               <div key={dIdx} className="flex justify-between items-center text-xs font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
-                                <span className="text-slate-700">{toEthDateString(ds.date)}</span>
+                                <span className="text-slate-700">{toGregDateString(ds.date)}</span>
                                 <span className="text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
                                   {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)} (Local)`}
                                 </span>

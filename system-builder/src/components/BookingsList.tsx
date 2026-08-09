@@ -5,17 +5,15 @@ import {
   Calendar, MapPin, Plus, CalendarX2, CheckCircle2, Clock3, XCircle, AlertCircle, Edit, Trash2, Lock, Ticket, Users, Phone, AlignLeft, Save, ChevronLeft, ChevronRight, Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { format } from 'date-fns';
 
-// --- ETHIOPIAN DATE CONVERTER ---
-const toEthDateString = (gStr: string | undefined | null) => {
+// --- GREGORIAN DATE FORMATTER ---
+const toGregDateString = (gStr: string | undefined | null) => {
   if (!gStr) return 'TBD';
   try {
     const [y, m, d] = gStr.split('T')[0].split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gStr;
   }
@@ -255,8 +253,8 @@ export default function BookingsList() {
                       <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100">
                         <Calendar size={14} className="text-emerald-500"/> 
                         {startDate === endDate 
-                          ? toEthDateString(startDate) 
-                          : `${toEthDateString(startDate).split(',')[0]} - ${toEthDateString(endDate)}`}
+                          ? toGregDateString(startDate) 
+                          : `${toGregDateString(startDate)} – ${toGregDateString(endDate)}`}
                       </span>
                       
                       <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">

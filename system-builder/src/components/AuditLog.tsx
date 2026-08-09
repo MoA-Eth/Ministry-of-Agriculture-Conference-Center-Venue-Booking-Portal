@@ -7,8 +7,7 @@ import {
   TrendingUp, ShieldCheck, ChevronLeft
 } from 'lucide-react';
 import { format, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
-import { EthiopianCalendar, ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
+import { GregorianCalendar } from '@/components/ui/ethiopian-calendar';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -80,12 +79,10 @@ function CategoryBadge({ action }: { action: string }) {
 function DetailPanel({ log }: { log: AuditEntry }) {
   const { toEthTime } = useApp();
   
-  const toEthFullDate = (iso: string) => {
+  const toGregFullDate = (iso: string) => {
     try {
       const d = new Date(iso);
-      const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
-      const eth = EthDateTime.fromEuropeanDate(checkDate);
-      return `${ETH_MONTHS[eth.month - 1]} ${eth.date}, ${eth.year} E.C.`;
+      return format(d, 'MMMM d, yyyy');
     } catch { return '—'; }
   };
 
@@ -106,7 +103,7 @@ function DetailPanel({ log }: { log: AuditEntry }) {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Calendar size={14} className="text-slate-400 shrink-0"/>
-          <span className="text-slate-600 font-medium">{toEthFullDate(log.timestamp)}</span>
+          <span className="text-slate-600 font-medium">{toGregFullDate(log.timestamp)}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Clock size={14} className="text-slate-400 shrink-0"/>
@@ -200,18 +197,13 @@ export default function AuditLog() {
   const paginated = logs;
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 
-  const toEthDateDisplay = (iso: string) => {
+  const toGregDateDisplay = (iso: string) => {
     try {
       if (!iso) return '—';
       const d = new Date(iso);
       if (isNaN(d.getTime())) return iso;
-      
-      // FIX: Use noon to avoid timezone shifting
-      const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
-      const eth = EthDateTime.fromEuropeanDate(checkDate);
-      return `${ETH_MONTHS[eth.month - 1]} ${eth.date}, ${eth.year} E.C.`;
+      return format(d, 'MMM d, yyyy');
     } catch (e) { 
-      console.error('Eth Conversion Error:', e);
       return iso; 
     }
   };
@@ -220,7 +212,7 @@ export default function AuditLog() {
   const exportCSV = () => {
     const header = ['ID', 'Timestamp', 'User', 'Full Name', 'Action', 'Details', 'IP Address'];
     const rows = logs.map(l => [
-      l.id, `${toEthDateDisplay(l.timestamp)} ${toEthTime(l.timestamp)}`,
+      l.id, `${toGregDateDisplay(l.timestamp)} ${toEthTime(l.timestamp)}`,
       l.user_name || 'system', l.full_name || 'System',
       l.action, `"${l.details.replace(/"/g, '""')}"`, l.ip_address || ''
     ]);
@@ -294,7 +286,7 @@ export default function AuditLog() {
 
           {/* Date controls row */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Ethiopian Date Range Picker */}
+            {/* Gregorian Date Range Picker */}
             <div className="relative">
                <button 
                   onClick={() => setShowCalendar(!showCalendar)}
@@ -302,56 +294,70 @@ export default function AuditLog() {
                >
                   <Calendar size={16} className={dateFrom || dateTo ? 'text-emerald-500' : 'text-slate-400'} />
                   <div className="flex flex-col items-start leading-tight">
-                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range (E.C.)</span>
+                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range</span>
                      <span className="text-[11px] font-bold">
-                        {dateFrom ? toEthDateDisplay(dateFrom) : 'Start'}
+                        {dateFrom ? toGregDateDisplay(dateFrom) : 'Start Date'}
                         <span className="mx-1 text-slate-300">—</span>
-                        {dateTo ? toEthDateDisplay(dateTo) : 'End'}
+                        {dateTo ? toGregDateDisplay(dateTo) : (dateFrom ? 'Select End' : 'End Date')}
                      </span>
                   </div>
                   <ChevronDown size={13} className={`transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
                </button>
 
                {showCalendar && (
-                  <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-[100] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-200 max-w-[calc(100vw-2rem)]">
-                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-50">
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Range</h4>
-                        <button onClick={() => setShowCalendar(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400"><X size={18}/></button>
-                     </div>
-                     <EthiopianCalendar 
-                        allowPast={true}
-                        selected={{ 
-                           from: dateFrom ? new Date(dateFrom + 'T12:00:00') : undefined, 
-                           to: dateTo ? new Date(dateTo + 'T12:00:00') : undefined 
-                        }}
-                        onSelect={(range) => {
-                           if (range.from) {
-                              setDateFrom(format(range.from, 'yyyy-MM-dd'));
-                              if (!range.to) setDateTo('');
-                           }
-                           if (range.to) {
-                              setDateTo(format(range.to, 'yyyy-MM-dd'));
-                              setShowCalendar(false);
-                           }
-                           setPage(1);
-                        }}
-                     />
-                     {dateFrom && !dateTo && (
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                           <span className="text-[10px] text-slate-400 font-bold">Single day selected</span>
-                           <div className="flex gap-2">
-                              <button onClick={() => { setDateTo(dateFrom); setShowCalendar(false); setPage(1); }}
-                                 className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
-                                 Apply
-                              </button>
-                              <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
-                                 className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
-                                 Clear
-                              </button>
+                  <>
+                     <div className="fixed inset-0 z-[140]" onClick={() => setShowCalendar(false)} />
+                     <div className="absolute top-full left-0 mt-2 z-[150] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-200 max-w-[calc(100vw-2rem)] min-w-[300px] sm:min-w-[340px]">
+                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+                           <div>
+                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Date Range</h4>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] font-bold">
+                                 <span className={`px-2 py-0.5 rounded-md ${dateFrom ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
+                                    Start: {dateFrom ? toGregDateDisplay(dateFrom) : 'None'}
+                                 </span>
+                                 <span className="text-slate-300">→</span>
+                                 <span className={`px-2 py-0.5 rounded-md ${dateTo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
+                                    End: {dateTo ? toGregDateDisplay(dateTo) : 'None'}
+                                 </span>
+                              </div>
                            </div>
+                           <button onClick={() => setShowCalendar(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 shrink-0"><X size={18}/></button>
                         </div>
-                     )}
-                  </div>
+                        <GregorianCalendar 
+                           allowPast={true}
+                           selected={{ 
+                              from: dateFrom ? new Date(dateFrom + 'T12:00:00') : undefined, 
+                              to: dateTo ? new Date(dateTo + 'T12:00:00') : undefined 
+                           }}
+                           onSelect={(range) => {
+                              if (range.from) {
+                                 setDateFrom(format(range.from, 'yyyy-MM-dd'));
+                                 if (!range.to) setDateTo('');
+                              }
+                              if (range.to) {
+                                 setDateTo(format(range.to, 'yyyy-MM-dd'));
+                                 setShowCalendar(false);
+                              }
+                              setPage(1);
+                           }}
+                        />
+                        {dateFrom && !dateTo && (
+                           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                              <span className="text-[10px] text-slate-400 font-bold">Single day selected</span>
+                              <div className="flex gap-2">
+                                 <button onClick={() => { setDateTo(dateFrom); setShowCalendar(false); setPage(1); }}
+                                    className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
+                                    Apply
+                                 </button>
+                                 <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
+                                    className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
+                                    Clear
+                                 </button>
+                              </div>
+                           </div>
+                        )}
+                     </div>
+                  </>
                )}
             </div>
 
@@ -462,7 +468,7 @@ export default function AuditLog() {
 
                       {/* Timestamp */}
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-black text-slate-900 tracking-tight">{toEthDateDisplay(log.timestamp)}</span>
+                        <span className="text-sm font-black text-slate-900 tracking-tight">{toGregDateDisplay(log.timestamp)}</span>
                         <div className="flex items-center gap-1.5">
                           <span className="w-1 h-1 rounded-full bg-emerald-500" />
                           <span className="text-[11px] text-slate-500 font-bold tracking-wider">{toEthTime(log.timestamp)}</span>
@@ -536,7 +542,7 @@ export default function AuditLog() {
                       <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
                         <span className="flex items-center gap-1">
                           <Clock size={10} className="text-emerald-500" />
-                          {toEthDateDisplay(log.timestamp)}
+                          {toGregDateDisplay(log.timestamp)}
                         </span>
                         <span className="font-bold">{toEthTime(log.timestamp)}</span>
                       </div>

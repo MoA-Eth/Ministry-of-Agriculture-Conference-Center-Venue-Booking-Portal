@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { format, addDays, differenceInDays, isToday, isFuture, isPast, parseISO, subDays } from 'date-fns';
 import { Booking, BookingStatus } from '@/lib/types';
-import { ETH_MONTHS, EthiopianCalendar } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { GREG_MONTHS, GregorianCalendar } from '@/components/ui/ethiopian-calendar';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -50,8 +49,7 @@ function ScrollReveal({ children, delay = 0, className = "" }: { children: React
   );
 }
 
-// Derive short month names from the full names
-const ETH_MONTHS_SHORT = ETH_MONTHS.map(m => m.substring(0, 3));
+const GREG_MONTHS_SHORT = GREG_MONTHS.map(m => m.substring(0, 3));
 
 const COLORS = ['#268053', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
 const STATUS_COLORS: Record<string, string> = {
@@ -68,13 +66,12 @@ const STATUS_COLORS: Record<string, string> = {
   completed: '#0f172a',    // Dark
 };
 
-const getEthDateString = (gregStr: string) => {
+const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
   }
@@ -107,18 +104,28 @@ function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: ()
   const { venues, technicalServices, supportServices, toEthTime } = useApp();
   const venue = venues.find(v => v.id === booking.venueId);
 
+  const gregDateFull = (gregStr: string) => {
+    try {
+      const [y, m, d] = gregStr.split('-').map(Number);
+      return format(new Date(y, m - 1, d, 12), 'MMMM d, yyyy');
+    } catch { return gregStr; }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <div className="bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        <div className="relative h-40 shrink-0">
-           <div className="absolute inset-0 bg-gradient-to-br from-[#1b4332] to-[#268053]" />
+        <div className="bg-gradient-to-br from-[#1b4332] to-[#268053] p-6 sm:p-8 text-white relative shrink-0">
            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-           <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-10">
+           <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
              <CloseIcon size={20} />
            </button>
-           <div className="absolute bottom-6 left-8 z-10">
+           <div className="relative z-10 pr-12 pt-2 sm:pt-4">
               <StatusBadge status={booking.status as BookingStatus} />
-              <h2 className="text-3xl font-serif font-black text-white mt-3 tracking-tight drop-shadow-sm uppercase line-clamp-1">{booking.eventTitle}</h2>
+              <div className="mt-3 sm:mt-4">
+                <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
+                  {booking.eventTitle}
+                </h2>
+              </div>
            </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 font-sans custom-scrollbar">
@@ -131,7 +138,7 @@ function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: ()
                         <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053]"><Calendar size={20} /></div>
                         <div>
                            <p className="text-sm font-black text-slate-900 leading-none mb-1">
-                              {booking.startDate === booking.endDate ? getEthDateString(booking.startDate) : `${getEthDateString(booking.startDate).split(',')[0]} — ${getEthDateString(booking.endDate)}`}
+                               {booking.startDate === booking.endDate ? gregDateFull(booking.startDate) : `${gregDateFull(booking.startDate)} — ${gregDateFull(booking.endDate)}`}
                            </p>
                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
                         </div>
@@ -255,33 +262,54 @@ export default function Dashboard() {
   // ─── FILTER LOGIC ──────────────────────────────────────────
   const bookings = useMemo(() => {
     return rawBookings.filter(b => {
+      const bStatus = (b.status || '').toLowerCase();
       // A booking is "in range" if its event overlaps with the selected window.
-      // startDate and endDate are always YYYY-MM-DD strings — safe to compare lexicographically.
       if (dashDateFrom && b.endDate < dashDateFrom) return false;
       if (dashDateTo   && b.startDate > dashDateTo)   return false;
-      if (selectedVenue  !== 'all' && b.venueId !== selectedVenue)  return false;
-      if (selectedStatus !== 'all' && b.status  !== selectedStatus) return false;
+      if (selectedVenue  !== 'all' && String(b.venueId) !== String(selectedVenue)) return false;
+      
+      if (selectedStatus !== 'all') {
+        if (selectedStatus === 'pending') {
+          if (!['pending', 'reserved'].includes(bStatus)) return false;
+        } else if (selectedStatus === 'approved') {
+          if (!['management_approved', 'approved'].includes(bStatus)) return false;
+        } else if (selectedStatus === 'partial_paid') {
+          if (bStatus !== 'partial_paid') return false;
+        } else if (selectedStatus === 'confirmed') {
+          if (!['paid', 'confirmed', 'completed'].includes(bStatus)) return false;
+        } else if (selectedStatus === 'override') {
+          if (bStatus !== 'override' && !(b.eventTitle || '').includes('VIP OVERRIDE')) return false;
+        } else if (selectedStatus === 'rejected') {
+          if (bStatus !== 'rejected') return false;
+        } else if (selectedStatus === 'cancelled') {
+          if (bStatus !== 'cancelled') return false;
+        } else {
+          if (bStatus !== selectedStatus) return false;
+        }
+      }
       return true;
     });
   }, [rawBookings, dashDateFrom, dashDateTo, selectedVenue, selectedStatus]);
 
-  // ─── EXCLUDED STATUSES (deleted / cancelled events) ────────
-  // Bookings with these statuses are hidden from headline metrics
-  const EXCLUDED_STATUSES = ['cancelled', 'rejected'];
-
-  // Active bookings = everything that is NOT cancelled or rejected
-  const activeOnlyBookings = bookings.filter(b => !EXCLUDED_STATUSES.includes(b.status));
+  // Active bookings logic: if user explicitly selects cancelled or rejected in the status filter, include them so metrics reflect the filter!
+  const activeOnlyBookings = useMemo(() => {
+    if (selectedStatus === 'cancelled' || selectedStatus === 'rejected') {
+      return bookings;
+    }
+    return bookings.filter(b => !['cancelled', 'rejected'].includes((b.status || '').toLowerCase()));
+  }, [bookings, selectedStatus]);
 
   // ─── CORE METRICS ──────────────────────────────────────────
-  const confirmedCount = activeOnlyBookings.filter(b => ['paid', 'confirmed', 'completed'].includes(b.status)).length;
-  const pendingCount  = activeOnlyBookings.filter(b => b.status === 'reserved').length;
-  const completedCount = activeOnlyBookings.filter(b => b.status === 'completed').length;
-  const rejectedCount = bookings.filter(b => EXCLUDED_STATUSES.includes(b.status)).length;
-  const activeBookings = activeOnlyBookings.filter(b => ['paid', 'partial_paid', 'confirmed', 'reserved'].includes(b.status));
+  const confirmedCount = activeOnlyBookings.filter(b => ['paid', 'confirmed', 'completed'].includes((b.status || '').toLowerCase())).length;
+  const pendingCount  = activeOnlyBookings.filter(b => ['pending', 'reserved'].includes((b.status || '').toLowerCase())).length;
+  const completedCount = activeOnlyBookings.filter(b => (b.status || '').toLowerCase() === 'completed').length;
+  const rejectedCount = rawBookings.filter(b => ['cancelled', 'rejected'].includes((b.status || '').toLowerCase())).length;
+  const activeBookings = activeOnlyBookings.filter(b => ['paid', 'partial_paid', 'confirmed', 'reserved', 'pending', 'management_approved', 'approved', 'override'].includes((b.status || '').toLowerCase()));
 
-  // Total Bookings and Total Participants exclude cancelled / rejected events
+  // Total Bookings and Total Participants reflect filtered bookings
   const totalBookingsCount = activeOnlyBookings.length;
   const totalParticipants = activeOnlyBookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+
 
   const approvedCountForRate = activeOnlyBookings.filter(b => ['approved', 'confirmed', 'completed', 'override'].includes(b.status)).length;
   const approvalRate = (approvedCountForRate + rejectedCount) > 0 
@@ -419,31 +447,14 @@ export default function Dashboard() {
       .sort((a, b) => b.bookings - a.bookings);
   }, [venues, bookings]);
 
-  // ─── 8. MONTHLY TREND (last 6 months simulation) ──────────
+  // ─── 8. MONTHLY TREND (last 6 months) ──────────
   const monthlyTrend = useMemo(() => {
     const todayGreg = new Date();
-    const todayEth = EthDateTime.fromEuropeanDate(todayGreg);
-    
     const months: { name: string; bookings: number; revenue: number }[] = [];
     for (let i = 5; i >= 0; i--) {
-      let targetYear = todayEth.year;
-      let targetMonth = todayEth.month - i;
-      while (targetMonth <= 0) {
-        targetMonth += 13;
-        targetYear -= 1;
-      }
-      
-      // First day of target Ethiopian month
-      const startEth = new EthDateTime(targetYear, targetMonth, 1, 12, 0, 0);
-      const startGreg = startEth.toEuropeanDate();
-      
-      // Last day of target Ethiopian month
-      const daysInMonth = targetMonth === 13 ? (targetYear % 4 === 3 ? 6 : 5) : 30;
-      const endEth = new EthDateTime(targetYear, targetMonth, daysInMonth, 12, 0, 0);
-      const endGreg = endEth.toEuropeanDate();
-      
-      const startStr = format(startGreg, 'yyyy-MM-dd');
-      const endStr = format(endGreg, 'yyyy-MM-dd');
+      const d = new Date(todayGreg.getFullYear(), todayGreg.getMonth() - i, 1);
+      const startStr = format(d, 'yyyy-MM-01');
+      const endStr = format(new Date(d.getFullYear(), d.getMonth() + 1, 0), 'yyyy-MM-dd');
       
       const monthBookings = bookings.filter(b => 
         b.startDate >= startStr && b.startDate <= endStr && 
@@ -451,7 +462,7 @@ export default function Dashboard() {
       );
       
       months.push({
-        name: ETH_MONTHS_SHORT[targetMonth - 1],
+        name: format(d, 'MMM'),
         bookings: monthBookings.length,
         revenue: monthBookings.reduce((s, b) => s + (b.totalPrice || 0), 0),
       });
@@ -521,22 +532,22 @@ export default function Dashboard() {
     };
   }, [priorityEvents]);
 
-  // ─── UTILITY: Ethiopian Date Parts ─────────────────────────
-  const getEthParts = (gregStr: string) => {
+  // ─── UTILITY: Gregorian Date Parts ─────────────────────────
+  const getGregParts = (gregStr: string) => {
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
-      const ethDate = EthDateTime.fromEuropeanDate(new Date(y, m - 1, d, 12));
-      return { month: ETH_MONTHS_SHORT[ethDate.month - 1], day: ethDate.date };
+      const date = new Date(y, m - 1, d, 12);
+      return { month: format(date, 'MMM'), day: d };
     } catch {
       return { month: '???', day: '??' };
     }
   };
 
-  const getEthDateFull = (gregStr: string) => {
+  const getGregDateFull = (gregStr: string) => {
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
-      const ethDate = EthDateTime.fromEuropeanDate(new Date(y, m - 1, d, 12));
-      return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+      const date = new Date(y, m - 1, d, 12);
+      return format(date, 'MMMM d, yyyy');
     } catch {
       return gregStr;
     }
@@ -580,7 +591,7 @@ export default function Dashboard() {
       <div className="mb-10 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Analytics Dashboard</h1>
-          <p className="text-slate-500 mt-2 font-medium">Real-time overview of conference center operations — <span className="text-[#268053] font-bold">{getEthDateFull(todayStr)}</span></p>
+          <p className="text-slate-500 mt-2 font-medium">Real-time overview of conference center operations — <span className="text-[#268053] font-bold">{getGregDateFull(todayStr)}</span></p>
         </div>
         
         {/* Filter Bar */}
@@ -589,7 +600,7 @@ export default function Dashboard() {
             <Filter size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Filters</span>
           </div>
           
-          {/* Ethiopian Calendar Range Picker */}
+          {/* Gregorian Calendar Range Picker */}
           <div className="relative">
             <button
               onClick={() => setShowDashCal(!showDashCal)}
@@ -600,16 +611,12 @@ export default function Dashboard() {
               }`}
             >
               <Calendar size={15} className={dashDateFrom || dashDateTo ? 'text-emerald-500' : 'text-slate-400'} />
-              <div className="flex flex-col items-start leading-none">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range (E.C.)</span>
+              <div className="flex flex-col items-start leading-tight">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range</span>
                 <span className="text-xs font-bold mt-0.5">
-                  {dashDateFrom
-                    ? (() => { try { const [y,m,d] = dashDateFrom.split('-').map(Number); const e = EthDateTime.fromEuropeanDate(new Date(y,m-1,d,12)); return `${ETH_MONTHS[e.month-1].substring(0,3)} ${e.date}`; } catch { return dashDateFrom; } })()
-                    : 'Start'}
-                  {' — '}
-                  {dashDateTo
-                    ? (() => { try { const [y,m,d] = dashDateTo.split('-').map(Number); const e = EthDateTime.fromEuropeanDate(new Date(y,m-1,d,12)); return `${ETH_MONTHS[e.month-1].substring(0,3)} ${e.date}`; } catch { return dashDateTo; } })()
-                    : 'End'}
+                  {dashDateFrom ? format(parseISO(dashDateFrom), 'MMM d, yyyy') : 'Start Date'}
+                  <span className="mx-1 text-slate-300">—</span>
+                  {dashDateTo ? format(parseISO(dashDateTo), 'MMM d, yyyy') : (dashDateFrom ? 'Select End' : 'End Date')}
                 </span>
               </div>
               {(dashDateFrom || dashDateTo) && (
@@ -620,41 +627,55 @@ export default function Dashboard() {
             </button>
 
             {showDashCal && (
-              <div className="absolute top-full left-0 mt-2 z-[200] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-6 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Range (E.C.)</h4>
-                  <button onClick={() => setShowDashCal(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400"><CloseIcon size={16}/></button>
-                </div>
-                <EthiopianCalendar
-                  allowPast={true}
-                  selected={{
-                    from: dashDateFrom ? new Date(dashDateFrom + 'T12:00:00') : undefined,
-                    to:   dashDateTo   ? new Date(dashDateTo   + 'T12:00:00') : undefined,
-                  }}
-                  onSelect={range => {
-                    if (range.from) {
-                      setDashDateFrom(format(range.from, 'yyyy-MM-dd'));
-                      if (!range.to) setDashDateTo('');
-                    }
-                    if (range.to) {
-                      setDashDateTo(format(range.to, 'yyyy-MM-dd'));
-                      setShowDashCal(false);
-                    }
-                  }}
-                />
-                {dashDateFrom && !dashDateTo && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2 justify-end">
-                    <button onClick={() => { setDashDateTo(dashDateFrom); setShowDashCal(false); }}
-                      className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
-                      Apply Single Day
-                    </button>
-                    <button onClick={() => { setDashDateFrom(''); setDashDateTo(''); }}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
-                      Clear
-                    </button>
+              <>
+                <div className="fixed inset-0 z-[140]" onClick={() => setShowDashCal(false)} />
+                <div className="absolute top-full left-0 mt-2 z-[150] bg-white rounded-[2rem] shadow-2xl border border-slate-100 p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200 max-w-[calc(100vw-2rem)] min-w-[300px] sm:min-w-[340px]">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Date Range</h4>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] font-bold">
+                        <span className={`px-2 py-0.5 rounded-md ${dashDateFrom ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
+                          Start: {dashDateFrom ? format(parseISO(dashDateFrom), 'MMM d, yyyy') : 'None'}
+                        </span>
+                        <span className="text-slate-300">→</span>
+                        <span className={`px-2 py-0.5 rounded-md ${dashDateTo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
+                          End: {dashDateTo ? format(parseISO(dashDateTo), 'MMM d, yyyy') : 'None'}
+                        </span>
+                      </div>
+                    </div>
+                    <button onClick={() => setShowDashCal(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 shrink-0"><CloseIcon size={16}/></button>
                   </div>
-                )}
-              </div>
+                  <GregorianCalendar
+                    allowPast={true}
+                    selected={{
+                      from: dashDateFrom ? new Date(dashDateFrom + 'T12:00:00') : undefined,
+                      to:   dashDateTo   ? new Date(dashDateTo   + 'T12:00:00') : undefined,
+                    }}
+                    onSelect={range => {
+                      if (range.from) {
+                        setDashDateFrom(format(range.from, 'yyyy-MM-dd'));
+                        if (!range.to) setDashDateTo('');
+                      }
+                      if (range.to) {
+                        setDashDateTo(format(range.to, 'yyyy-MM-dd'));
+                        setShowDashCal(false);
+                      }
+                    }}
+                  />
+                  {dashDateFrom && !dashDateTo && (
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2 justify-end">
+                      <button onClick={() => { setDashDateTo(dashDateFrom); setShowDashCal(false); }}
+                        className="px-4 py-2 bg-[#268053] text-white text-xs font-black rounded-xl hover:bg-[#1b4332] transition-colors">
+                        Apply Single Day
+                      </button>
+                      <button onClick={() => { setDashDateFrom(''); setDashDateTo(''); }}
+                        className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-slate-200 transition-colors">
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
 
@@ -669,11 +690,24 @@ export default function Dashboard() {
           <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}
             className="bg-slate-50 border-none text-sm font-bold text-slate-700 rounded-xl px-4 py-2 cursor-pointer outline-none focus:ring-2 focus:ring-[#268053]/20">
             <option value="all">All Statuses</option>
-            <option value="confirmed">Confirmed / Paid</option>
-            <option value="reserved">Pending</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="pending">Awaiting MoA Approval</option>
+            <option value="approved">MoA Approved</option>
+            <option value="partial_paid">Advance Paid</option>
+            <option value="confirmed">Confirmed / Fully Paid</option>
             <option value="override">VIP Override</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
           </select>
+
+          {(selectedVenue !== 'all' || selectedStatus !== 'all' || dashDateFrom !== '' || dashDateTo !== '') && (
+            <button
+              onClick={() => { setSelectedVenue('all'); setSelectedStatus('all'); setDashDateFrom(''); setDashDateTo(''); }}
+              className="flex items-center gap-1 text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-2 rounded-xl transition-all"
+            >
+              <CloseIcon size={14} /> Clear
+            </button>
+          )}
+
         </div>
       </div>
 
@@ -762,7 +796,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-900 tracking-tight font-serif">Monthly Trend</h3>
-              <p className="text-sm text-slate-500 font-medium">Booking frequency (Ethiopian months)</p>
+              <p className="text-sm text-slate-500 font-medium">Booking frequency (Monthly)</p>
             </div>
           </div>
           <div className="flex-1 min-h-[220px]">
@@ -971,7 +1005,7 @@ export default function Dashboard() {
               {paginatedPriority.map(b => {
                 const venue = venues.find(v => v.id === b.venueId);
                 const isUrgent = b.status === 'reserved';
-                const eth = getEthParts(b.startDate);
+                const greg = getGregParts(b.startDate);
                 const isConflict = conflicts.some(c => c.id === b.id);
                 const daysAway = differenceInDays(new Date(b.startDate), today);
                 const daysLabel = daysAway === 0 ? 'Today' : daysAway === 1 ? 'Tomorrow' : `${daysAway}d away`;
@@ -981,8 +1015,8 @@ export default function Dashboard() {
                     e.stopPropagation(); setActiveBooking(b); 
                   }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 group cursor-pointer border ${isConflict ? 'bg-red-50/50 border-red-100 hover:border-red-200' : 'bg-[#f8fafc] border-transparent hover:bg-white hover:shadow-xl hover:border-emerald-100'}`}>
                     <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border-b-4 ${isUrgent ? 'bg-amber-100 text-amber-600 border-amber-500/20' : 'bg-emerald-100 text-emerald-600 border-emerald-500/20'}`}>
-                      <span className="text-[9px] font-black uppercase leading-none mb-0.5">{eth.month}</span>
-                      <span className="text-xl font-black leading-none">{eth.day}</span>
+                      <span className="text-[9px] font-black uppercase leading-none mb-0.5">{greg.month}</span>
+                      <span className="text-xl font-black leading-none">{greg.day}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1134,7 +1168,7 @@ export default function Dashboard() {
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border border-slate-200" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
-                <h3 className="text-xl font-serif font-bold text-slate-900">Events on {getEthDateFull(selectedDayBookings.fullDate)}</h3>
+                <h3 className="text-xl font-serif font-bold text-slate-900">Events on {format(parseISO(selectedDayBookings.fullDate), 'MMMM d, yyyy')}</h3>
                 <p className="text-sm font-medium text-slate-500">{selectedDayBookings.bookings.length} events scheduled for {selectedDayBookings.name}</p>
               </div>
               <button onClick={() => setSelectedDayBookings(null)} className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm">

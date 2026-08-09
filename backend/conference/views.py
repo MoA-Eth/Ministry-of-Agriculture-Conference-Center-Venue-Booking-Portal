@@ -378,27 +378,37 @@ class BookingViewSet(viewsets.ModelViewSet):
         rules = SystemSettings.load()
 
         # ── Rule 1: Waiting Period ──────────────────────────────────────────
-        # Staff / admin roles (event_management, leadership, system_admin,
-        # admin_finance) are exempt from the advance-notice restriction so
-        # they can create urgent internal bookings.
+        # Standard bookings must be made at least waiting_period_hours in advance.
+        # Only VIP Override bookings (is_vip_booking) bypass this lead-time restriction.
         start_date_str = serializer.validated_data.get('start_date')
         event_title_str = serializer.validated_data.get('event_title', '')
         is_vip_booking = '⭐ [VIP OVERRIDE]' in event_title_str
 
         if start_date_str and rules.waiting_period_hours > 0 and not is_vip_booking:
-            role = get_role(user) if (user and user.is_authenticated) else 'organizer'
-            if role == 'organizer':
-                req_start_time = serializer.validated_data.get('start_time')
-                start_time_obj = req_start_time if req_start_time else time.min
-                start_dt = datetime.combine(start_date_str, start_time_obj).replace(
-                    tzinfo=timezone.get_current_timezone()
+            req_start_time = serializer.validated_data.get('start_time')
+            daily_scheds = self.request.data.get('daily_schedules', [])
+            if not req_start_time and isinstance(daily_scheds, list) and len(daily_scheds) > 0:
+                st_val = daily_scheds[0].get('startTime') or daily_scheds[0].get('start_time')
+                if st_val:
+                    try:
+                        h, m = map(int, str(st_val).split(':')[:2])
+                        req_start_time = time(h, m)
+                    except ValueError:
+                        pass
+
+            start_time_obj = req_start_time if req_start_time else time(8, 30)
+            naive_start = datetime.combine(start_date_str, start_time_obj)
+            try:
+                start_dt = timezone.make_aware(naive_start)
+            except Exception:
+                start_dt = naive_start.replace(tzinfo=timezone.utc)
+
+            min_allowed = timezone.now() + timedelta(hours=rules.waiting_period_hours)
+            if start_dt < min_allowed:
+                raise ValidationError(
+                    f"Bookings must be made at least {rules.waiting_period_hours} hour(s) in advance according to system business rules. "
+                    f"Earliest allowed start date/time is {min_allowed.strftime('%Y-%m-%d %H:%M UTC')}."
                 )
-                min_allowed = timezone.now() + timedelta(hours=rules.waiting_period_hours)
-                if start_dt < min_allowed:
-                    raise ValidationError(
-                        f"Bookings must be made at least {rules.waiting_period_hours} hour(s) in advance. "
-                        f"Please choose a date after {min_allowed.strftime('%Y-%m-%d %H:%M')}."
-                    )
 
         # ── Rule 2: Buffer Time ─────────────────────────────────────────────
         venue = serializer.validated_data.get('venue')
@@ -990,7 +1000,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
 class SystemSettingsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         settings = SystemSettings.load()

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { format } from 'date-fns';
 
-export const ETH_MONTHS = [
-  'Meskerem', 'Tikimt', 'Hidar', 'Tahsas', 'Tir', 'Yekatit',
-  'Megabit', 'Miazia', 'Genbot', 'Sene', 'Hamle', 'Nehase', 'Pagume'
+export const GREG_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];
+
+// Alias for backwards compatibility
+export const ETH_MONTHS = GREG_MONTHS;
 
 interface CalendarProps {
   selected?: { from?: Date; to?: Date };
@@ -16,39 +19,29 @@ interface CalendarProps {
   [key: string]: any; 
 }
 
-export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partialBookedDates = [], pendingDates = [], allowPast = false }: CalendarProps & { allowPast?: boolean }) {
-  
-  // FIX: Using 12:00 PM (Noon) prevents timezone offsets from shifting dates to "yesterday"
-  const [viewAnchor, setViewAnchor] = useState(() => {
-    const d = (selected?.from || new Date());
-    d.setHours(12, 0, 0, 0); 
-    return d;
-  });
+export function GregorianCalendar({ selected, onSelect, bookedDates = [], partialBookedDates = [], pendingDates = [], allowPast = false }: CalendarProps & { allowPast?: boolean }) {
+  const [viewYear, setViewYear] = useState(() => (selected?.from || new Date()).getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => (selected?.from || new Date()).getMonth()); // 0-indexed (0=Jan)
 
-  const anchorEth = EthDateTime.fromEuropeanDate(viewAnchor);
-  const viewEthYear = anchorEth.year;
-  const viewEthMonth = anchorEth.month;
-
-  // Ethiopian leap years happen when year % 4 === 3 (e.g. 2015, 2019)
-  const isLeapYear = viewEthYear % 4 === 3;
-  const daysInMonth = viewEthMonth === 13 ? (isLeapYear ? 6 : 5) : 30;
-
-  const firstDayGC = new Date(viewAnchor);
-  firstDayGC.setDate(firstDayGC.getDate() - (anchorEth.date - 1));
-  firstDayGC.setHours(12, 0, 0, 0); // Keep at noon
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(viewYear, viewMonth, 1);
 
   const nextMonth = () => {
-    const next = new Date(firstDayGC);
-    next.setDate(next.getDate() + daysInMonth); 
-    next.setHours(12, 0, 0, 0);
-    setViewAnchor(next);
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(prev => prev + 1);
+    } else {
+      setViewMonth(prev => prev + 1);
+    }
   };
 
   const prevMonth = () => {
-    const prev = new Date(firstDayGC);
-    prev.setDate(prev.getDate() - 1); 
-    prev.setHours(12, 0, 0, 0);
-    setViewAnchor(prev);
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(prev => prev - 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
   };
 
   const isSameDay = (d1: Date, d2: Date) => {
@@ -94,19 +87,16 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
   };
 
   const renderDays = () => {
-    const firstDayOfWeek = firstDayGC.getDay(); 
+    const firstDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday
     const days = [];
 
     for (let i = 0; i < firstDayOfWeek; i++) {
       days.push(<div key={`empty-${i}`} className="h-10 w-10"></div>);
     }
 
-    for (let i = 0; i < daysInMonth; i++) {
-      const currentGCDate = new Date(firstDayGC);
-      currentGCDate.setDate(firstDayGC.getDate() + i);
-      currentGCDate.setHours(12, 0, 0, 0); // Keep at noon
+    for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+      const currentGCDate = new Date(viewYear, viewMonth, dayNum, 12, 0, 0);
 
-      const ethDayNumber = i + 1;
       const selectedState = isSelected(currentGCDate);
       const booked = isBooked(currentGCDate);
       const partialBooked = isPartialBooked(currentGCDate);
@@ -134,12 +124,12 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
 
       days.push(
         <div
-          key={`day-${ethDayNumber}`}
+          key={`day-${dayNum}`}
           onClick={() => handleDateClick(currentGCDate)}
           className={className}
-          title={currentGCDate.toDateString()}
+          title={format(currentGCDate, 'PPP')}
         >
-          {ethDayNumber}
+          {dayNum}
           {selectedState && <Check className="absolute -top-1 -right-1 w-3 h-3 bg-white text-[#268053] rounded-full p-0.5 shadow-sm" />}
         </div>
       );
@@ -147,7 +137,7 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
     return days;
   };
 
-  const ethMonthName = ETH_MONTHS[viewEthMonth - 1] || 'Loading';
+  const monthName = GREG_MONTHS[viewMonth];
 
   return (
     <div className="w-80 select-none">
@@ -160,10 +150,8 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="text-center">
-          <h2 className="text-lg font-black text-slate-800 uppercase tracking-widest">{ethMonthName}</h2>
-          <p className="text-xs font-bold text-[#268053]">
-            {viewEthYear} E.C. <span className="text-slate-400 mx-1">•</span> {firstDayGC.toLocaleString('default', { month: 'short', year: 'numeric' })} G.C.
-          </p>
+          <h2 className="text-lg font-black text-slate-800 uppercase tracking-widest">{monthName}</h2>
+          <p className="text-xs font-bold text-[#268053]">{viewYear}</p>
         </div>
         <button
           onClick={nextMonth}
@@ -198,3 +186,6 @@ export function EthiopianCalendar({ selected, onSelect, bookedDates = [], partia
     </div>
   );
 }
+
+// Alias for backwards compatibility
+export const EthiopianCalendar = GregorianCalendar;

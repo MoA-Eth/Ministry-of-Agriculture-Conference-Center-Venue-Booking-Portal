@@ -3,30 +3,26 @@ import { useApp } from '@/lib/app-context';
 import { format, parseISO } from 'date-fns';
 import { Booking } from '@/lib/types';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users } from 'lucide-react';
-import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
 
-const ETH_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const GREG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const GREG_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const getEthDateString = (gregStr: string) => {
+const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
   }
 };
 
-
-
-// --- NEW: Dual Status Logic ---
+// --- Status Logic ---
 
 const adminStatusConfig = {
   pending: { label: 'Pending Action', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', borderLeft: 'border-l-amber-500', icon: <Clock3 size={12} className="shrink-0 text-amber-600" /> },
-  management_approved: { label: 'MoA Approved', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', borderLeft: 'border-l-teal-500', icon: <CheckCircle2 size={12} className="shrink-0 text-teal-600" /> },
+  management_approved: { label: 'MoA Approved', color: 'text-[#1b5e3a]', bg: 'bg-emerald-50/60', border: 'border-emerald-200', borderLeft: 'border-l-[#1b5e3a]', icon: <CheckCircle2 size={12} className="shrink-0 text-[#1b5e3a]" /> },
   partial_paid: { label: 'Advance Paid', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', borderLeft: 'border-l-blue-500', icon: <Clock size={12} className="shrink-0 text-blue-600" /> },
   paid: { label: 'Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', borderLeft: 'border-l-[#268053]', icon: <CheckCircle2 size={12} className="shrink-0 text-emerald-600" /> },
   approved: { label: 'VIP Override', color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', borderLeft: 'border-l-purple-500', icon: <Star size={12} className="shrink-0 text-purple-600" /> },
@@ -52,40 +48,41 @@ const getStatusProps = (status: string, isAdmin: boolean) => {
   }
 };
 
-
-// --- Modal Components ---
-
-function StatusBadge({ status }: { status: string }) {
+const StatusBadge = ({ status }: { status: string }) => {
   const cfg = getStatusProps(status, true);
   return (
-    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${cfg.bg} ${cfg.color} ${cfg.border} shadow-sm`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm ${cfg.bg} ${cfg.color} ${cfg.border} border`}>
       {cfg.icon}
       {cfg.label}
-    </div>
+    </span>
   );
-}
+};
 
-function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, onClose: () => void, toEthTime: any }) {
+// --- Modal Component ---
+
+function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, onClose: () => void, toEthTime: (t: string) => string }) {
   const { venues, technicalServices, supportServices } = useApp();
-  const venue = venues.find(v => v.id === booking.venueId);
+  const venue = venues.find(v => v.id?.toString() === booking.venueId?.toString());
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
-      {/* MOBILE RESPONSIVE MODAL WRAPPER */}
-      <div className="bg-white w-[95%] max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100">
         
-        {/* Modal Header */}
-        <div className="relative h-32 sm:h-40 shrink-0">
-           <div className="absolute inset-0 bg-gradient-to-br from-[#1b4332] to-[#268053]" />
+        {/* Modal Banner Header */}
+        <div className="bg-gradient-to-r from-[#111827] via-[#1b5e3a] to-[#268053] p-6 sm:p-8 text-white relative shrink-0">
            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
            
-           <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-10">
+           <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
              <CloseIcon size={20} />
            </button>
 
-           <div className="absolute bottom-4 left-6 sm:bottom-6 sm:left-8 z-10">
+           <div className="relative z-10 pr-12 pt-2 sm:pt-4">
               <StatusBadge status={booking.status} />
-              <h2 className="text-xl sm:text-3xl font-serif font-black text-white mt-2 sm:mt-3 tracking-tight drop-shadow-sm uppercase line-clamp-1 pr-12">{booking.eventTitle}</h2>
+              <div className="mt-3 sm:mt-4">
+                <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
+                  {booking.eventTitle}
+                </h2>
+              </div>
            </div>
         </div>
 
@@ -102,7 +99,7 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0"><CalendarIcon size={18} /></div>
                         <div className="min-w-0">
                            <p className="text-xs sm:text-sm font-black text-slate-900 leading-none mb-1 truncate">
-                              {booking.startDate === booking.endDate ? getEthDateString(booking.startDate) : `${getEthDateString(booking.startDate).split(',')[0]} — ${getEthDateString(booking.endDate)}`}
+                              {booking.startDate === booking.endDate ? getGregDateString(booking.startDate) : `${getGregDateString(booking.startDate).split(',')[0]} — ${getGregDateString(booking.endDate)}`}
                            </p>
                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
                         </div>
@@ -111,7 +108,7 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0"><Clock size={18} /></div>
                         <div className="min-w-0">
                            <p className="text-xs sm:text-sm font-black text-slate-900 leading-none mb-1 truncate">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}</p>
-                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule (Local)</p>
+                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule</p>
                         </div>
                      </div>
                   </div>
@@ -152,12 +149,12 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                </div>
 
                <div>
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
-                 <div className="bg-[#f8fafc] p-3 sm:p-4 rounded-xl border border-slate-100 h-24 sm:h-28 overflow-y-auto custom-scrollbar">
-                   <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed italic">
-                     {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
-                   </p>
-                 </div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
+                  <div className="bg-[#f8fafc] p-3 sm:p-4 rounded-xl border border-slate-100 h-24 sm:h-28 overflow-y-auto custom-scrollbar">
+                    <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed italic">
+                      {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
+                    </p>
+                  </div>
                </div>
             </div>
 
@@ -197,8 +194,6 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                   </a>
                 </div>
               )}
-
-
             </div>
           </div>
         </div>
@@ -220,19 +215,19 @@ export default function CalendarView() {
   
   const isAdmin = ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
 
-  const today = EthDateTime.now();
-  const [view, setView] = useState({ year: today.year, month: today.month });
+  const now = new Date();
+  const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() }); // month: 0..11
 
-  const prevMonth = () => setView(v => v.month === 1 ? { year: v.year - 1, month: 13 } : { ...v, month: v.month - 1 });
-  const nextMonth = () => setView(v => v.month === 13 ? { year: v.year + 1, month: 1 } : { ...v, month: v.month + 1 });
+  const prevMonth = () => setView(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 });
+  const nextMonth = () => setView(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 });
 
-  const daysInMonth = view.month === 13 ? (view.year % 4 === 3 ? 6 : 5) : 30;
-  const firstDayGreg = new EthDateTime(view.year, view.month, 1, 12, 0, 0).toEuropeanDate();
-  const startOffset = firstDayGreg.getDay() === 0 ? 6 : firstDayGreg.getDay() - 1; 
+  const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
+  const firstDayGreg = new Date(view.year, view.month, 1, 12, 0, 0);
+  const startOffset = firstDayGreg.getDay(); // 0 = Sunday
 
   const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
      const day = i + 1;
-     const gregDate = new EthDateTime(view.year, view.month, day, 12, 0, 0).toEuropeanDate();
+     const gregDate = new Date(view.year, view.month, day, 12, 0, 0);
      return { day, gregDate };
   });
 
@@ -255,16 +250,16 @@ export default function CalendarView() {
           <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 tracking-tight flex items-center gap-2 sm:gap-3">
              <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#268053]" /> Master Schedule
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 sm:mt-2">Full Ethiopian Calendar grid viewing all pending and confirmed events.</p>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 sm:mt-2">Full Master Schedule viewing all pending and confirmed events.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
           
-          {/* UPDATED: Dynamic Legend based on Role */}
+          {/* Dynamic Legend based on Role */}
           {isAdmin ? (
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
               <span className="flex items-center gap-1.5 text-amber-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500" /> Pending</span>
-              <span className="flex items-center gap-1.5 text-teal-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-teal-500" /> MoA Approved</span>
+              <span className="flex items-center gap-1.5 text-[#1b5e3a] whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#1b5e3a]" /> MoA Approved</span>
               <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> Advance Paid</span>
               <span className="flex items-center gap-1.5 text-emerald-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#268053]" /> Fully Paid</span>
               <span className="flex items-center gap-1.5 text-purple-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-purple-500" /> VIP</span>
@@ -300,7 +295,7 @@ export default function CalendarView() {
           </button>
           
           <h2 className="text-lg sm:text-2xl font-black tracking-widest uppercase">
-             {ETH_MONTHS[view.month - 1]} {view.year}
+             {GREG_MONTHS[view.month]} {view.year}
           </h2>
           
           <button onClick={nextMonth} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
@@ -315,7 +310,7 @@ export default function CalendarView() {
             
             {/* Days Header */}
             <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-              {ETH_DAYS.map(d => (
+              {GREG_DAYS.map(d => (
                 <div key={d} className="text-center py-2 sm:py-3 text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest border-r border-slate-200 last:border-0">
                    {d}
                 </div>
@@ -390,13 +385,8 @@ export default function CalendarView() {
                                   <MapPin size={8} className="shrink-0 sm:w-[10px] sm:h-[10px]" />
                                   <span className="truncate">{venueName}</span>
                                </div>
-
-                               <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isAdmin ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
-                                  <Clock size={8} className="shrink-0 sm:w-[10px] sm:h-[10px]" />
-                                  <span className="truncate">{toEthTime(b.startTime)} - {toEthTime(b.endTime)}</span>
-                               </div>
                             </div>
-                          )
+                          );
                        })}
                      </div>
                    </div>
@@ -406,7 +396,6 @@ export default function CalendarView() {
           </div>
         </div>
       </div>
-      
     </div>
   );
 }

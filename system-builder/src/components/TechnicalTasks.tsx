@@ -19,8 +19,7 @@ import {
   Video,
   Tv
 } from 'lucide-react';
-import { ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { format } from 'date-fns';
 
 const serviceIcons: Record<string, React.ReactNode> = {
   'Internet Access': <Wifi className="w-4 h-4" />,
@@ -30,13 +29,12 @@ const serviceIcons: Record<string, React.ReactNode> = {
   'default': <Cpu className="w-4 h-4" />
 };
 
-const getEthDateString = (gregStr: string) => {
+const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
     const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-    const ethDate = EthDateTime.fromEuropeanDate(gDate);
-    return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+    return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
   }
@@ -132,8 +130,7 @@ export default function TechnicalTasks() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-slate-400" />
-                          {/* NEW: Ethiopian Date applied here */}
-                          <span>{getEthDateString(b.startDate)}</span>
+                          <span>{getGregDateString(b.startDate)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-slate-400" />

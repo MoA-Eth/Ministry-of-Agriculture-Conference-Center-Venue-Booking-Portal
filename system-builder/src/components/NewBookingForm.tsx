@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useApp } from '@/lib/app-context';
+import { useApp, API_BASE } from '@/lib/app-context';
 import { DailySchedule } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, eachDayOfInterval, startOfDay } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, Users, CheckCircle2, Paperclip, Sparkles, Receipt, Building2, ShieldAlert, MonitorSmartphone, Coffee, AlertTriangle, Lock, Phone, Utensils } from 'lucide-react';
-import { EthiopianCalendar, ETH_MONTHS } from '@/components/ui/ethiopian-calendar';
-import { EthDateTime } from 'ethiopian-calendar-date-converter';
+import { Calendar as CalendarIcon, Clock, Users, CheckCircle2, Paperclip, Sparkles, Receipt, Building2, ShieldAlert, MonitorSmartphone, Coffee, AlertTriangle, Lock, Phone, Utensils, FileText, Info } from 'lucide-react';
+import { EthiopianCalendar, GregorianCalendar } from '@/components/ui/ethiopian-calendar';
 
 const steps = [
   { num: 1, label: 'DETAILS' },
@@ -99,17 +98,33 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [waitingPeriodHours, setWaitingPeriodHours] = useState<number>(48);
+
+  useEffect(() => {
+    const fetchRules = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/settings/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.waiting_period_hours !== undefined) {
+            setWaitingPeriodHours(Number(data.waiting_period_hours));
+          }
+        }
+      } catch (e) {
+        console.error("Could not fetch business rules:", e);
+      }
+    };
+    fetchRules();
+  }, []);
 
   const isPrivilegedUser = ['leadership', 'system_admin', 'event_management'].includes(user?.role || '');
   const availableVenues = venues || [];
 
-  const getEthDateString = (gregStr: string) => {
+  const getGregDateString = (gregStr: string) => {
     if (!gregStr) return '';
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
-      const gDate = new Date(y, m - 1, d, 12, 0, 0); 
-      const ethDate = EthDateTime.fromEuropeanDate(gDate);
-      return `${ETH_MONTHS[ethDate.month - 1]} ${ethDate.date}, ${ethDate.year}`;
+      return format(new Date(y, m - 1, d, 12, 0, 0), 'MMM d, yyyy');
     } catch { return gregStr; }
   };
 
@@ -365,6 +380,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       
       if (!form.startDate || !form.endDate) {
         errs.startDate = 'Start and End dates are required';
+      } else {
+        const now = new Date();
+        const minAllowedTime = new Date(now.getTime() + waitingPeriodHours * 60 * 60 * 1000);
+        const selectedStart = new Date(form.startDate + 'T08:30:00');
+        if (selectedStart < minAllowedTime) {
+          errs.startDate = `Business Rule: Minimum ${waitingPeriodHours} hour(s) advance notice required (Earliest date: ${format(minAllowedTime, 'MMM d, yyyy')})`;
+        }
       }
       
       if (!form.participantCount || isNaN(parseInt(form.participantCount)) || parseInt(form.participantCount) <= 0) {
@@ -607,11 +629,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                     selected={{ from: form.startDate ? parseISO(form.startDate) : undefined, to: form.endDate ? parseISO(form.endDate) : undefined }} 
                     onSelect={(r) => {
                       if (r?.from) {
-                        const today = startOfDay(new Date());
+                        const now = new Date();
+                        const minAllowedTime = new Date(now.getTime() + waitingPeriodHours * 60 * 60 * 1000);
+                        const minAllowedDay = startOfDay(minAllowedTime);
                         const selectedDate = startOfDay(r.from);
                         
-                        if (selectedDate < today) {
-                          toast.error("You cannot book a date in the past.");
+                        if (selectedDate < minAllowedDay) {
+                          toast.error(`Business Rule Restriction: Bookings must be made at least ${waitingPeriodHours} hour(s) in advance. Earliest allowed date is ${format(minAllowedTime, 'MMM d, yyyy')}.`);
                           return; 
                         }
                       }
@@ -626,13 +650,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   <div className={`p-4 border-2 rounded-xl bg-white text-sm font-black uppercase tracking-widest flex justify-between items-center shadow-sm ${errors.startDate ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}>
                     <span className="text-slate-300">START</span> 
                     <span className="text-[#268053]">
-                      {form.startDate ? getEthDateString(form.startDate) : '---'}
+                      {form.startDate ? getGregDateString(form.startDate) : '---'}
                     </span>
                   </div>
                   <div className={`p-4 border-2 rounded-xl bg-white text-sm font-black uppercase tracking-widest flex justify-between items-center shadow-sm ${errors.startDate ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}>
                     <span className="text-slate-300">END</span> 
                     <span className="text-[#268053]">
-                      {form.endDate ? getEthDateString(form.endDate) : '---'}
+                      {form.endDate ? getGregDateString(form.endDate) : '---'}
                     </span>
                   </div>
                   {errors.startDate && (
@@ -657,7 +681,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                       <div key={s.date} className={`flex flex-col border-2 p-3 sm:p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
                         {/* Date label */}
                         <span className="text-[11px] font-black uppercase text-slate-600 tracking-widest flex items-center gap-2 mb-3">
-                          <Clock size={13} className="text-emerald-500 shrink-0"/> {getEthDateString(s.date)}
+                          <Clock size={13} className="text-emerald-500 shrink-0"/> {getGregDateString(s.date)}
                         </span>
 
                         {/* Controls row — wraps on small screens */}
@@ -798,7 +822,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
                       {i === 1 && (
                         <div className="p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
-                          <div className="flex items-center gap-3 mb-5">
+                          <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
                               <Coffee size={20} />
                             </div>
@@ -807,9 +831,20 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                 Coffee Break Snacks &amp; Lunch Catering
                               </p>
                               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-1">
-                                For coffee break snacks and lunch catering, please contact:
+                                Catering Services &amp; Provider Contacts
                               </p>
                             </div>
+                          </div>
+                          
+                          {/* Catering Services Guidelines Notice */}
+                          <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-3.5 space-y-1.5 text-slate-800 mb-4 shadow-sm">
+                            <div className="flex items-center gap-2 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
+                              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>Catering Services Guidelines</span>
+                            </div>
+                            <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
+                              Please be advised that catering services are neither provided nor coordinated by the Center. Should catering be required for your event, you may directly contact the catering providers available within the MoA premises, including Mama's Kitchen, Mao Coffee, and MoA Café (Shemachochi), to discuss menu options, pricing, and service arrangements. Clients maintain full responsibility for coordinating all catering arrangements directly with their preferred provider.
+                            </p>
                           </div>
                           
                           <div className="grid gap-2">
@@ -838,6 +873,19 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                 </a>
                               </div>
                             </div>
+
+                            <div className="bg-white border-2 border-slate-100/50 rounded-xl p-3 flex items-center gap-3 group hover:border-emerald-200 transition-all shadow-sm">
+                              <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
+                                <Utensils size={16} />
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
+                                <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MoA Café (Shemachochi):</span>
+                                <a href="tel:+251911888999" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                  <Phone size={12} className="shrink-0" />
+                                  <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 888 999</span>
+                                </a>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -845,6 +893,20 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   );
                 })}
               </div>
+
+              {/* Official Request Letter Requirements Notice */}
+              <div className="bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-amber-50/90 border-2 border-amber-200/80 rounded-2xl p-5 shadow-sm text-slate-800 space-y-2.5">
+                <div className="flex items-center gap-2.5 text-amber-900 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <span>Official Request Letter Requirements</span>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed font-medium sm:pl-10">
+                  Please note that an official request letter must be submitted on the organization's letterhead and signed by an authorized representative. The letter must explicitly specify the event theme or purpose, the number of participants, the event start and end dates with specific time slots, the selected venue, and any special requirements or requests. Ensuring that complete information is provided initially will help prevent processing delays and subsequent follow-up.
+                </p>
+              </div>
+
               <div onClick={() => document.getElementById('contract-upload')?.click()} className="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 transition-all group shadow-inner">
                 <input
                   id="contract-upload"
@@ -900,7 +962,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   
                   <div className="space-y-4 mb-8">
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Venue:</span><span className="text-slate-800 bg-slate-100 px-3 py-1 rounded-md">{selectedVenue?.name}</span></div>
-                    <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Dates:</span><span className="text-slate-800">{getEthDateString(form.startDate)} - {getEthDateString(form.endDate)}</span></div>
+                    <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Dates:</span><span className="text-slate-800">{getGregDateString(form.startDate)} - {getGregDateString(form.endDate)}</span></div>
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Max:</span><span className="text-[#268053] bg-emerald-50 px-3 py-1 rounded-md">{form.participantCount} Guests</span></div>
                   </div>
 
