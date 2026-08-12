@@ -379,12 +379,14 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         # ── Rule 1: Waiting Period ──────────────────────────────────────────
         # Standard bookings must be made at least waiting_period_hours in advance.
-        # Only VIP Override bookings (is_vip_booking) bypass this lead-time restriction.
+        # Only VIP Override bookings (is_vip_booking) or Event Management/Admin roles bypass this lead-time restriction.
         start_date_str = serializer.validated_data.get('start_date')
         event_title_str = serializer.validated_data.get('event_title', '')
         is_vip_booking = '⭐ [VIP OVERRIDE]' in event_title_str
+        user_role = get_role(user)
+        is_privileged_role = user_role in ('event_management', 'system_admin', 'leadership')
 
-        if start_date_str and rules.waiting_period_hours > 0 and not is_vip_booking:
+        if start_date_str and rules.waiting_period_hours > 0 and not is_vip_booking and not is_privileged_role:
             req_start_time = serializer.validated_data.get('start_time')
             daily_scheds = self.request.data.get('daily_schedules', [])
             if not req_start_time and isinstance(daily_scheds, list) and len(daily_scheds) > 0:
