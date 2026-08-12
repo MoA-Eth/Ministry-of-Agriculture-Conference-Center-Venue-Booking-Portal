@@ -824,23 +824,6 @@ export default function LandingPage() {
               <a href="/privacy-policy" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }} className="text-slate-400 hover:text-emerald-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors">
                 Privacy Policy
               </a>
-              <span className="text-slate-700 text-xs hidden sm:inline">•</span>
-              <a 
-                href="https://amanuel-tarekegn.page.gd/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open('https://amanuel-tarekegn.page.gd/', '_blank', 'noopener,noreferrer');
-                }}
-                className="relative z-10 cursor-pointer pointer-events-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/90 hover:bg-emerald-900/90 border border-slate-700 hover:border-emerald-500/80 text-slate-300 hover:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-emerald-900/40 hover:scale-105 active:scale-95 group"
-              >
-                <span className="text-slate-400 group-hover:text-slate-200">Developer:</span>
-                <span className="text-emerald-400 group-hover:text-emerald-300 font-extrabold flex items-center gap-1">
-                  Amanuel Tarekegn
-                  <ArrowUpRight size={14} className="shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </span>
-              </a>
             </div>
           </div>
         </div>
