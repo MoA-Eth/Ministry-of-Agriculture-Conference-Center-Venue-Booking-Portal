@@ -670,28 +670,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         if booking.status not in ('pending', 'management_approved', 'partial_paid', 'paid', 'approved'):
             return Response({'error': 'Only active bookings can be cancelled.'}, status=400)
 
-        # ── Rule 3: Cancellation Policy (only enforced for organizers) ──────
+        # ── Rule: Organizers can only cancel before MoA approval (payment stage) ──────
         if role == 'organizer':
-            rules = SystemSettings.load()
-            now = timezone.now()
-            event_start = datetime.combine(booking.start_date, booking.start_time or time.min)
-            event_start = timezone.make_aware(event_start) if timezone.is_naive(event_start) else event_start
-            hours_until_event = (event_start - now).total_seconds() / 3600
-
-            if rules.cancellation_policy == 'strict' and hours_until_event < 168:  # 7 days
+            if booking.status not in ('pending', 'reserved'):
                 return Response(
-                    {'error': 'Strict cancellation policy: Cancellations are not allowed within 7 days of the event.'},
-                    status=400
-                )
-            elif rules.cancellation_policy == 'moderate' and hours_until_event < 48:
-                return Response(
-                    {'error': 'Moderate cancellation policy: Cancellations are not allowed within 48 hours of the event.'},
-                    status=400
-                )
-            # 'flexible' policy: cancellation allowed up to 24 hours before
-            elif rules.cancellation_policy == 'flexible' and hours_until_event < 24:
-                return Response(
-                    {'error': 'Flexible cancellation policy: Cancellations are not allowed within 24 hours of the event.'},
+                    {'error': 'Self-serve cancellation is only permitted before receiving approval from the MoA office. Once your request is approved or reaches the payment stage, please contact MoA Events Management for assistance.'},
                     status=400
                 )
 
@@ -720,26 +703,10 @@ class BookingViewSet(viewsets.ModelViewSet):
             if booking.status not in ('pending', 'management_approved', 'partial_paid', 'paid', 'approved'):
                 return Response({'error': 'Only active bookings can be cancelled.'}, status=400)
 
-            # ── Rule 3: Cancellation Policy ─────────────────────────────────
-            rules = SystemSettings.load()
-            now = timezone.now()
-            event_start = datetime.combine(booking.start_date, booking.start_time or time.min)
-            event_start = timezone.make_aware(event_start) if timezone.is_naive(event_start) else event_start
-            hours_until_event = (event_start - now).total_seconds() / 3600
-
-            if rules.cancellation_policy == 'strict' and hours_until_event < 168:
+            # ── Rule: Public cancel permitted only before MoA office approval ──────
+            if booking.status not in ('pending', 'reserved'):
                 return Response(
-                    {'error': 'Strict cancellation policy: Cancellations are not allowed within 7 days of the event.'},
-                    status=400
-                )
-            elif rules.cancellation_policy == 'moderate' and hours_until_event < 48:
-                return Response(
-                    {'error': 'Moderate cancellation policy: Cancellations are not allowed within 48 hours of the event.'},
-                    status=400
-                )
-            elif rules.cancellation_policy == 'flexible' and hours_until_event < 24:
-                return Response(
-                    {'error': 'Flexible cancellation policy: Cancellations are not allowed within 24 hours of the event.'},
+                    {'error': 'Self-serve cancellation is only permitted before receiving approval from the MoA office. Once your request is approved or reaches the payment stage, please contact MoA Events Management for assistance.'},
                     status=400
                 )
 

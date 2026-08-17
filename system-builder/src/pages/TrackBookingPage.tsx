@@ -101,6 +101,11 @@ export default function TrackBookingPage() {
 
   const handleCancel = async () => {
     if (!booking) return;
+
+    if (!['pending', 'reserved'].includes(normalizedStatus)) {
+      toast.error('Cancellations are only allowed before receiving approval from the MoA office. Please contact MoA Events Management for assistance.');
+      return;
+    }
     
     if (isLocked) {
       toast.error('Bookings cannot be cancelled within 24 hours of the event start time.');
@@ -263,27 +268,33 @@ export default function TrackBookingPage() {
              )}
 
              {/* EDIT AND CANCEL ACTIONS BAR */}
-             {['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
-                <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-slate-100 mt-4">
-                   {isLocked ? (
-                     <div className="w-full flex items-center justify-center gap-3 text-amber-700 bg-amber-50 p-4 rounded-xl border border-amber-200">
-                       <Lock size={20} className="shrink-0" />
-                       <p className="text-sm font-bold">Locked: Less than 24 hours to event.</p>
-                     </div>
-                   ) : (
-                     <>
-                       {['pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
-                         <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
-                           <Edit2 size={16} /> Edit Details
-                         </button>
-                       )}
-                       <button onClick={handleCancel} className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 hover:border-rose-200 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
-                         <XCircle size={16} /> Cancel Booking
-                       </button>
-                     </>
-                   )}
-                </div>
-             )}
+              {['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
+                 <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-slate-100 mt-4">
+                    {isLocked ? (
+                      <div className="w-full flex items-center justify-center gap-3 text-amber-700 bg-amber-50 p-4 rounded-xl border border-amber-200">
+                        <Lock size={20} className="shrink-0" />
+                        <p className="text-sm font-bold">Locked: Less than 24 hours to event.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {['pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (
+                          <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <Edit2 size={16} /> Edit Details
+                          </button>
+                        )}
+                        {['pending', 'reserved'].includes(normalizedStatus) ? (
+                          <button onClick={handleCancel} className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 hover:border-rose-200 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <XCircle size={16} /> Cancel Booking
+                          </button>
+                        ) : (
+                          <div className="flex-1 bg-slate-50 border border-slate-200 text-slate-500 p-4 rounded-2xl text-xs font-bold text-center leading-relaxed">
+                            MoA Approved / Payment Stage — Self-service cancellation disabled. Contact MoA Events Team for assistance.
+                          </div>
+                        )}
+                      </>
+                    )}
+                 </div>
+              )}
              
              {/* Read-only notice */}
              {!['paid', 'approved', 'pending', 'management_approved', 'partial_paid'].includes(normalizedStatus) && (

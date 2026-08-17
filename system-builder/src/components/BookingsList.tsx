@@ -280,21 +280,29 @@ export default function BookingsList() {
                          </div>
                       ) : (
                         <div className="flex gap-2 w-full md:w-auto">
-                          <Button 
-                            variant="outline" 
-                            className="flex-1 md:flex-none border-slate-300 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 font-bold" 
-                            onClick={() => handleOpenEdit(booking)}
-                          >
-                            <Edit size={14} className="mr-2" /> Edit
-                          </Button>
-                          
-                          <Button 
-                            variant="ghost" 
-                            className="flex-1 md:flex-none bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 font-bold" 
-                            onClick={() => handleCancel(String(booking.id))}
-                          >
-                            <Trash2 size={14} className="mr-2" /> Cancel
-                          </Button>
+                          {['pending', 'reserved'].includes(booking.status) ? (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 md:flex-none border-slate-300 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 font-bold" 
+                                onClick={() => handleOpenEdit(booking)}
+                              >
+                                <Edit size={14} className="mr-2" /> Edit
+                              </Button>
+                              
+                              <Button 
+                                variant="ghost" 
+                                className="flex-1 md:flex-none bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 font-bold" 
+                                onClick={() => handleCancel(String(booking.id))}
+                              >
+                                <Trash2 size={14} className="mr-2" /> Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-center">
+                              Approved / Payment Stage — Contact MoA Office for Cancellation
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>

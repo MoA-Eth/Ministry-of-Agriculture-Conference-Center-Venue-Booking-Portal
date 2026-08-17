@@ -850,7 +850,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               <span>Catering Services Guidelines</span>
                             </div>
                             <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
-                              Please be advised that catering services are neither provided nor coordinated by the Center. Should catering be required for your event, you may directly contact the catering providers available within the MoA premises, including Mama's Kitchen, Mao Coffee, and MoA Café (Shemachochi), to discuss menu options, pricing, and service arrangements. Clients maintain full responsibility for coordinating all catering arrangements directly with their preferred provider.
+                              Please be advised that catering services are neither provided nor coordinated by the Center. Should catering be required for your event, you may directly contact the catering providers available within the MoA premises, including Mama's Kitchen, Mao Coffee, and MoA Cooperative Caffee and Restaurant, to discuss menu options, pricing, and service arrangements. Clients maintain full responsibility for coordinating all catering arrangements directly with their preferred provider.
                             </p>
                           </div>
                           
@@ -861,9 +861,9 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               </div>
                               <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
                                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Mama's Kitchen (MOACC):</span>
-                                <a href="tel:+251911234567" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                <a href="tel:+251995101010" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
                                   <Phone size={12} className="shrink-0" />
-                                  <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 234 567</span>
+                                  <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 995 101 010</span>
                                 </a>
                               </div>
                             </div>
@@ -874,10 +874,16 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               </div>
                               <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
                                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MAO Coffee (MOACC):</span>
-                                <a href="tel:+251911987654" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
-                                  <Phone size={12} className="shrink-0" />
-                                  <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 987 654</span>
-                                </a>
+                                <div className="flex flex-wrap gap-2">
+                                  <a href="tel:+251911661848" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                    <Phone size={12} className="shrink-0" />
+                                    <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 661 848</span>
+                                  </a>
+                                  <a href="tel:+251947899245" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                    <Phone size={12} className="shrink-0" />
+                                    <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 947 899 245</span>
+                                  </a>
+                                </div>
                               </div>
                             </div>
 
@@ -886,11 +892,17 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                 <Utensils size={16} />
                               </div>
                               <div className="flex flex-wrap items-center justify-between flex-1 gap-2">
-                                <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MoA Café (Shemachochi):</span>
-                                <a href="tel:+251911888999" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
-                                  <Phone size={12} className="shrink-0" />
-                                  <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 911 888 999</span>
-                                </a>
+                                <span className="text-xs font-bold text-slate-700 whitespace-nowrap">MoA Cooperative Caffee and Restaurant:</span>
+                                <div className="flex flex-wrap gap-2">
+                                  <a href="tel:+251999828384" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                    <Phone size={12} className="shrink-0" />
+                                    <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 999 828 384</span>
+                                  </a>
+                                  <a href="tel:+251923611509" className="bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 hover:bg-emerald-100 transition-colors shadow-sm">
+                                    <Phone size={12} className="shrink-0" />
+                                    <span className="text-[10px] font-black tracking-wider whitespace-nowrap">+251 923 611 509</span>
+                                  </a>
+                                </div>
                               </div>
                             </div>
                           </div>

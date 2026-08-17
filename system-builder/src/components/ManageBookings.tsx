@@ -56,7 +56,7 @@ export default function ManageBookings() {
     if (role === 'leadership') {
       return ['action', 'mgmt_approved', 'rejected', 'all'] as TabFilter[];
     } else {
-      return ['mgmt_approved', 'partial', 'confirmed', 'vip', 'rejected', 'all'] as TabFilter[];
+      return ['action', 'mgmt_approved', 'partial', 'confirmed', 'vip', 'rejected', 'all'] as TabFilter[];
     }
   }, [role]);
 
@@ -286,7 +286,7 @@ export default function ManageBookings() {
                     {cStartD === cEndD ? toGregDateString(cStartD) : `${toGregDateString(cStartD)} – ${toGregDateString(cEndD)}`}
                   </span>
                   <span className="flex items-center gap-2"><Clock size={16} className="text-red-500" />
-                    {cTimeStart} to {cTimeEnd} (Local)
+                    {cTimeStart} to {cTimeEnd}
                   </span>
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function ManageBookings() {
             className={`whitespace-nowrap px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-[#268053] text-[#268053]' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
               }`}
           >
-            {tab === 'action' ? 'Awaiting MoA Approval' :
+            {tab === 'action' ? 'Pending MoA Approval' :
               tab === 'mgmt_approved' ? 'MoA Approved' :
                 tab === 'partial' ? 'Advance Paid' :
                   tab === 'confirmed' ? 'Fully Paid' :
@@ -739,7 +739,7 @@ export default function ManageBookings() {
 
                           <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b border-slate-200">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</span>
-                            <span className="font-bold text-[#268053] flex items-center gap-1.5"><Clock size={12} /> {startTime} to {endTime} (Local)</span>
+                            <span className="font-bold text-[#268053] flex items-center gap-1.5"><Clock size={12} /> {startTime} to {endTime}</span>
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -801,7 +801,7 @@ export default function ManageBookings() {
                               <div key={dIdx} className="flex justify-between items-center text-xs font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
                                 <span className="text-slate-700">{toGregDateString(ds.date)}</span>
                                 <span className="text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
-                                  {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)} (Local)`}
+                                  {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)}`}
                                 </span>
                               </div>
                             ))}

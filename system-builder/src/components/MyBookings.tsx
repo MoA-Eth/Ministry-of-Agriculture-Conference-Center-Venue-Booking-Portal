@@ -157,16 +157,22 @@ export default function MyBookings() {
                     {b.status === 'confirmed' && (<p className="text-sm font-bold text-emerald-600 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Payment Verified. Venue Secured.</p>)}
                   </div>
 
-                  {['pending', 'management_approved', 'partial_paid', 'approved', 'confirmed', 'paid'].includes(b.status) && (
+                  {['pending', 'reserved', 'management_approved', 'partial_paid', 'approved', 'confirmed', 'paid'].includes(b.status) && (
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
                       {isLocked ? (
                          <div className="flex items-center gap-2 text-amber-700 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200"><Lock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Locked (Under 24h)</span></div>
                       ) : (
                         <>
-                          {['pending', 'reserved'].includes(b.status) && (
-                            <Button variant="outline" className="w-full sm:w-auto font-bold border-slate-300" onClick={() => handleOpenEdit(b)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
+                          {['pending', 'reserved'].includes(b.status) ? (
+                            <>
+                              <Button variant="outline" className="w-full sm:w-auto font-bold border-slate-300" onClick={() => handleOpenEdit(b)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
+                              <Button variant="ghost" className="w-full sm:w-auto font-bold text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(safeId)}><Trash2 className="w-4 h-4 mr-2" /> Cancel</Button>
+                            </>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-center">
+                              Approved / Payment Stage — Contact MoA Office for Cancellation
+                            </span>
                           )}
-                          <Button variant="ghost" className="w-full sm:w-auto font-bold text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancel(safeId)}><Trash2 className="w-4 h-4 mr-2" /> Cancel</Button>
                         </>
                       )}
                     </div>

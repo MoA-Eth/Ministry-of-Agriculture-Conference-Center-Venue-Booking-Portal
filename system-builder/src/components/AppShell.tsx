@@ -62,7 +62,7 @@ const navItems: NavItem[] = [
   { label: 'User Management', icon: <Users size={20} />, id: 'user-management', roles: ['system_admin'] },
   { label: 'Activity Log', icon: <History size={20} />, id: 'audit-log', roles: ['event_management', 'system_admin', 'leadership'] },
   { label: 'Business Rules', icon: <Settings size={20} />, id: 'business-rules', roles: ['system_admin', 'event_management'] },
-  { label: 'Billing & Admin', icon: <Banknote size={20} />, id: 'billing-admin', roles: ['admin_finance'] },
+  { label: 'Billing & Admin', icon: <Banknote size={20} />, id: 'billing-admin', roles: ['admin_finance', 'event_management', 'system_admin'] },
   { label: 'Profile Settings', icon: <UserCog size={20} />, id: 'profile-settings', roles: ['organizer', 'event_management', 'ict_admin', 'catering_support', 'admin_finance', 'leadership', 'system_admin'] },
 ];
 

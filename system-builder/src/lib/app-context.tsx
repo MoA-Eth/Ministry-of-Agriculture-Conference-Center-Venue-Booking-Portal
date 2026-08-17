@@ -32,6 +32,7 @@ interface AppContextType {
   acknowledgeCateringTask: (id: string, acknowledged: boolean) => Promise<void>;
   toggleSupportServiceAvailability: (bookingId: string, serviceId: string) => Promise<void>;
   auditLogs: any[];
+  toEthTime: (date: Date | string | undefined | null) => string;
   refreshData: () => void;
 }
 
@@ -108,7 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // --- ETHIOPIAN TIME UTILITY ---
+  // --- GREGORIAN TIME UTILITY ---
   const toEthTime = (date: Date | string | undefined | null) => {
     if (!date) return 'TBD';
     try {
@@ -118,17 +119,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const gregHour = d.getHours();
       const mins = d.getMinutes().toString().padStart(2, '0');
 
-      // Ethiopian 12-hour convention: 6 AM is 12:00
-      let ethHour = (gregHour - 6 + 12) % 12;
-      if (ethHour === 0) ethHour = 12;
+      // Standard Gregorian 12-hour AM/PM format
+      const hour12 = gregHour % 12 || 12;
+      const period = gregHour >= 12 ? 'PM' : 'AM';
 
-      let period = "";
-      if (gregHour >= 6 && gregHour < 12) period = "Morning";
-      else if (gregHour >= 12 && gregHour < 18) period = "Afternoon";
-      else if (gregHour >= 18 && gregHour < 24) period = "Evening";
-      else period = "Night";
-
-      return `${ethHour}:${mins} ${period}`;
+      return `${hour12.toString().padStart(2, '0')}:${mins} ${period}`;
     } catch {
       return typeof date === 'string' ? date : 'TBD';
     }
@@ -494,9 +489,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         toast.success('Booking cancelled');
         refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.detail || 'Cancellation failed');
       }
-    } catch (error) {
-      toast.error('Cancellation failed');
+    } catch (error: any) {
+      toast.error(error.message || 'Cancellation failed');
+      throw error;
     }
   }, [refreshData, getHeaders]);
 

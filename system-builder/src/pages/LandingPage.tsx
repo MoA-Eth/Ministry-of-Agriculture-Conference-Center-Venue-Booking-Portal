@@ -83,7 +83,7 @@ function EventDetailsModal({ booking, venueName, onClose, toEthTime }: EventDeta
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</p>
               <div className="flex items-center gap-2 text-slate-900 font-bold">
                 <Clock size={14} className="text-emerald-600 shrink-0" />
-                <span className="text-xs sm:text-sm truncate">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)} (Local)</span>
+                <span className="text-xs sm:text-sm truncate">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}</span>
               </div>
             </div>
           </div>
@@ -789,7 +789,7 @@ export default function LandingPage() {
 
       <footer className="bg-[#0f172a] text-white pt-16 sm:pt-20 pb-8 sm:pb-12 px-4 sm:px-6 lg:px-12 xl:px-20 mt-0">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 pb-16 sm:pb-20 border-b border-white/10 mb-12 sm:mb-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 sm:gap-12 pb-16 sm:pb-20 border-b border-white/10 mb-12 sm:mb-20">
             <div>
               <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">Main Headquarters</h4>
               <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Ministry of Agriculture Area<br />Addis Ababa, Ethiopia<br />P.O. Box 62347</p>
@@ -799,12 +799,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Mon - Fri: 8:30 AM - 5:30 PM<br />Sat: 9:00 AM - 12:30 PM<br />Sun: Closed</p>
             </div>
             <div>
-              <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">ICT Support</h4>
-              <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Email: support@moa.gov.et<br />Phone: +251 11 123 4567<br />Internal: Ext. 405</p>
+              <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">Event Management</h4>
+              <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Phone: +251 939 826 697<br />Email: events@moa.gov.et</p>
             </div>
             <div>
-              <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">Facility Rental</h4>
-              <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Email: events@moa.gov.et<br />Phone: +251 11 123 8899</p>
+              <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">Technical Support</h4>
+              <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Phone: +251 939 538 767<br />Email: support@moa.gov.et</p>
+            </div>
+            <div>
+              <h4 className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 sm:mb-6">Catterers</h4>
+              <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">Phone: +251 997 802 726</p>
             </div>
           </div>
           <div className="flex flex-col md:flex-row justify-between gap-8 sm:gap-12 pb-8 sm:pb-12">

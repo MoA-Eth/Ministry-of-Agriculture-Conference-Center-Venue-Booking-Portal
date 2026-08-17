@@ -553,13 +553,18 @@ export default function Dashboard() {
     }
   };
 
+  const formatMoney = (amount: number) => {
+    if (isNaN(amount) || amount === null || amount === undefined) return '0.00 ETB';
+    return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
+  };
+
   // ─── TOP-LEVEL STAT CARDS ──────────────────────────────────
   // NOTE: cancelled and rejected events are excluded from all headline stats
   const stats = [
     { label: 'Total Bookings', value: totalBookingsCount, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: 'Active events only' },
     { label: 'Approval Rate', value: `${approvalRate}%`, icon: <Target className="w-6 h-6 text-amber-400" />, bg: 'bg-[#1e1b10]', border: 'border-amber-500/20', sub: 'Approved vs Cancelled' },
     { label: 'Total Participants', value: totalParticipants.toLocaleString(), icon: <Users className="w-6 h-6 text-blue-400" />, bg: 'bg-[#0f172a]', border: 'border-blue-500/20', sub: 'Active events only' },
-    ...(isAdmin ? [{ label: 'Confirmed Revenue', value: `ETB ${(confirmedRevenue / 1000).toFixed(1)}k`, icon: <Banknote className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#0d2818]', border: 'border-emerald-500/20', sub: 'From approved bookings' }] : []),
+    ...(isAdmin ? [{ label: 'Confirmed Revenue', value: formatMoney(confirmedRevenue), icon: <Banknote className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#0d2818]', border: 'border-emerald-500/20', sub: 'From approved bookings' }] : []),
   ];
 
   // ─── CUSTOM TOOLTIP ────────────────────────────────────────
@@ -1151,11 +1156,11 @@ export default function Dashboard() {
           {/* Today's Revenue Summary */}
           <div className="mt-8 pt-6 border-t border-white/5 relative z-10 grid grid-cols-2 gap-4">
             <div className="bg-white/5 rounded-2xl p-4 text-center border border-white/5">
-              <p className="text-xl font-black text-white mb-0.5">ETB {confirmedRevenue.toLocaleString()}</p>
+              <p className="text-xl font-black text-white mb-0.5">{formatMoney(confirmedRevenue)}</p>
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Confirmed Revenue</p>
             </div>
             <div className="bg-white/5 rounded-2xl p-4 text-center border border-white/5">
-              <p className="text-xl font-black text-amber-400 mb-0.5">ETB {pendingRevenue.toLocaleString()}</p>
+              <p className="text-xl font-black text-amber-400 mb-0.5">{formatMoney(pendingRevenue)}</p>
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Pending Revenue</p>
             </div>
           </div>

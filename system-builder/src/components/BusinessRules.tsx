@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Clock, ShieldAlert, CalendarClock, Save, CheckCircle2 } from 'lucide-react';
+import { Settings, Clock, CalendarClock, Save, CheckCircle2 } from 'lucide-react';
 import { useApp, API_BASE } from '@/lib/app-context';
 import { toast } from 'sonner';
 
@@ -7,7 +7,6 @@ export default function BusinessRules() {
   const { token } = useApp();
   const [waitingPeriod, setWaitingPeriod] = useState('48');
   const [bufferTime, setBufferTime] = useState('60');
-  const [cancellationPolicy, setCancellationPolicy] = useState('strict');
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +21,6 @@ export default function BusinessRules() {
           const data = await res.json();
           setWaitingPeriod(data.waiting_period_hours?.toString() || '48');
           setBufferTime(data.buffer_time_minutes?.toString() || '60');
-          setCancellationPolicy(data.cancellation_policy || 'strict');
         }
       } catch (err) {
         console.error('Failed to load system settings', err);
@@ -44,8 +42,7 @@ export default function BusinessRules() {
         },
         body: JSON.stringify({
           waiting_period_hours: parseInt(waitingPeriod) || 48,
-          buffer_time_minutes: parseInt(bufferTime) || 60,
-          cancellation_policy: cancellationPolicy
+          buffer_time_minutes: parseInt(bufferTime) || 60
         })
       });
       
@@ -109,7 +106,7 @@ export default function BusinessRules() {
           </div>
 
           {/* Buffer Time */}
-          <div className="grid sm:grid-cols-3 gap-6 items-start border-b border-slate-100 pb-10">
+          <div className="grid sm:grid-cols-3 gap-6 items-start">
             <div className="sm:col-span-1">
               <div className="flex items-center gap-2 mb-2">
                 <CalendarClock className="w-5 h-5 text-amber-500" />
@@ -128,40 +125,6 @@ export default function BusinessRules() {
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 uppercase tracking-wider">
                   Minutes
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Cancellation Policy */}
-          <div className="grid sm:grid-cols-3 gap-6 items-start">
-            <div className="sm:col-span-1">
-              <div className="flex items-center gap-2 mb-2">
-                <ShieldAlert className="w-5 h-5 text-rose-500" />
-                <h3 className="font-bold text-slate-900">Cancellation Policy</h3>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">Determine how cancellations are handled regarding refunds and penalties.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <div className="grid gap-3">
-                {[
-                  { id: 'flexible', label: 'Flexible', desc: 'Full refund up to 24 hours before the event' },
-                  { id: 'moderate', label: 'Moderate', desc: '50% refund up to 48 hours before the event' },
-                  { id: 'strict', label: 'Strict', desc: 'No refunds within 7 days of the event' },
-                ].map(policy => (
-                  <label 
-                    key={policy.id} 
-                    onClick={() => setCancellationPolicy(policy.id)}
-                    className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${cancellationPolicy === policy.id ? 'border-[#268053] bg-emerald-50/50' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
-                  >
-                    <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${cancellationPolicy === policy.id ? 'border-[#268053]' : 'border-slate-300'}`}>
-                      {cancellationPolicy === policy.id && <div className="w-2.5 h-2.5 bg-[#268053] rounded-full" />}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">{policy.label}</div>
-                      <div className="text-xs text-slate-500 mt-1">{policy.desc}</div>
-                    </div>
-                  </label>
-                ))}
               </div>
             </div>
           </div>
