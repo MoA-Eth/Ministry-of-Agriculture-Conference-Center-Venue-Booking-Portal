@@ -419,12 +419,12 @@ export default function ManageBookings() {
       </div>
 
       {/* Tab Filters (Categories) */}
-      <div className="flex overflow-x-auto pb-2 mb-6 border-b border-slate-200 hide-scrollbar">
+      <div className="flex flex-nowrap overflow-x-auto pb-2 mb-6 border-b border-slate-200 hide-scrollbar gap-1">
         {visibleTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); setExpandedId(null); setRejectingId(null); }}
-            className={`whitespace-nowrap px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-[#268053] text-[#268053]' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
+            className={`shrink-0 whitespace-nowrap px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab ? 'border-[#268053] text-[#268053]' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'
               }`}
           >
             {tab === 'action' ? 'Pending MoA Approval' :

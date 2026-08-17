@@ -97,7 +97,7 @@ function AppContent() {
       case 'business-rules':
         return ['system_admin', 'event_management'].includes(role) ? <BusinessRules /> : <CalendarView />;
       case 'billing-admin':
-        return ['admin_finance', 'system_admin', 'event_management'].includes(role) ? <BillingAdmin /> : <CalendarView />;
+        return role === 'admin_finance' ? <BillingAdmin /> : <CalendarView />;
       case 'profile-settings':
         return <ProfileSettings />;
       default: 
