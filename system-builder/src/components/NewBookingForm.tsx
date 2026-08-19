@@ -623,12 +623,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 </div>
               </div>
 
-              {isPrivilegedUser && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 text-xs font-semibold flex items-center gap-2 shadow-sm">
-                  <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Event Manager / Admin Privilege Active: Minimum waiting period ({waitingPeriodHours}h) notice restriction is bypassed for your role.</span>
-                </div>
-              )}
+
 
               <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row gap-8 shadow-sm">
                 <div className="bg-slate-50/80 p-4 rounded-2xl flex justify-center border border-slate-100">
