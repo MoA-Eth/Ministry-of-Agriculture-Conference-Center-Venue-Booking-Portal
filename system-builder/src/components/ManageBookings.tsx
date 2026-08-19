@@ -566,7 +566,7 @@ export default function ManageBookings() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Clock className="w-3.5 h-3.5 text-slate-400" />
                       <span className="font-bold text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
-                        {startTime} - {endTime} Local
+                        {startTime} - {endTime}
                       </span>
                     </div>
 
