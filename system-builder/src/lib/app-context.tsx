@@ -2,7 +2,13 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser } from './types';
 import { toast } from 'sonner';
 
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const isLocal = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '0.0.0.0' ||
+  window.location.hostname === '[::1]' ||
+  import.meta.env.DEV
+);
 export const API_BASE = import.meta.env.VITE_API_BASE || (isLocal ? 'http://localhost:8000/api' : 'https://cms.moa.gov.et/api');
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || (isLocal ? 'http://localhost:8000' : 'https://cms.moa.gov.et');
 
@@ -337,13 +343,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       formData.append('end_date', form.endDate || form.end_date);
       formData.append('participant_count', (form.participantCount || form.participant_count || 0).toString());
 
-      formData.append('daily_schedules', JSON.stringify(form.dailySchedules || []));
+      const normalizedSchedules = (form.dailySchedules || []).map((ds: any) => ({
+        ...ds,
+        startTime: ds.allDay ? '08:30' : (ds.startTime || '08:30'),
+        endTime: ds.allDay ? '17:30' : (ds.endTime || '17:30')
+      }));
+      formData.append('daily_schedules', JSON.stringify(normalizedSchedules));
 
-      if (form.dailySchedules?.length > 0) {
-        const first = form.dailySchedules[0];
-        formData.append('start_time', first.allDay ? '00:00' : (first.startTime || '08:30'));
-        const last = form.dailySchedules[form.dailySchedules.length - 1];
-        formData.append('end_time', last.allDay ? '23:59' : (last.endTime || '17:30'));
+      if (normalizedSchedules.length > 0) {
+        const first = normalizedSchedules[0];
+        formData.append('start_time', first.startTime);
+        const last = normalizedSchedules[normalizedSchedules.length - 1];
+        formData.append('end_time', last.endTime);
       }
 
       const t_services = form.technicalServices || form.technical_services || [];

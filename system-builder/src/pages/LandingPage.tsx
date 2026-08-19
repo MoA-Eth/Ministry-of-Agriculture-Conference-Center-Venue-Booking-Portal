@@ -289,8 +289,8 @@ export default function LandingPage() {
       if (b.dailySchedules && b.dailySchedules.length > 0) {
         const ds = b.dailySchedules.find(d => d.date === todayStr);
         if (ds) {
-          todayStartTime = ds.allDay ? '00:00' : (ds.startTime || b.startTime);
-          todayEndTime = ds.allDay ? '23:59' : (ds.endTime || b.endTime);
+          todayStartTime = ds.allDay ? '08:30' : (ds.startTime || b.startTime || '08:30');
+          todayEndTime = ds.allDay ? '17:30' : (ds.endTime || b.endTime || '17:30');
         }
       } else if (b.startDate <= todayStr && b.endDate >= todayStr) {
         todayStartTime = b.startTime;
@@ -343,8 +343,8 @@ export default function LandingPage() {
       if (b.dailySchedules && b.dailySchedules.length > 0) {
         for (const ds of b.dailySchedules) {
           const schedDate = ds.date;
-          const sTime = ds.allDay ? '00:00' : (ds.startTime || b.startTime);
-          const eTime = ds.allDay ? '23:59' : (ds.endTime || b.endTime);
+          const sTime = ds.allDay ? '08:30' : (ds.startTime || b.startTime || '08:30');
+          const eTime = ds.allDay ? '17:30' : (ds.endTime || b.endTime || '17:30');
 
           if (schedDate > todayStr || (schedDate === todayStr && eTime > nowTimeStr)) {
             entries.push({

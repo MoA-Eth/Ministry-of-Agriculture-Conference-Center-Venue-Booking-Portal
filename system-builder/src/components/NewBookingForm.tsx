@@ -349,7 +349,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
   const updateSchedule = (index: number, field: keyof DailySchedule, value: string | boolean) => {
     setForm(prev => {
       const news = [...prev.dailySchedules];
-      news[index] = { ...news[index], [field]: value };
+      if (field === 'allDay' && value === true) {
+        news[index] = { ...news[index], allDay: true, startTime: '08:30', endTime: '17:30' };
+      } else if (field === 'allDay' && value === false) {
+        news[index] = { ...news[index], allDay: false };
+      } else {
+        news[index] = { ...news[index], [field]: value };
+      }
       return { ...prev, dailySchedules: news };
     });
   };
@@ -700,7 +706,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               <select value={s.endTime?.substring(0, 5)} onChange={e => updateSchedule(idx, 'endTime', e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20">{generateHourOptions()}</select>
                             </div>
                           ) : (
-                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">Full Day Locked</span>
+                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap">Full Day (08:30 AM - 05:30 PM)</span>
                           )}
                         </div>
 

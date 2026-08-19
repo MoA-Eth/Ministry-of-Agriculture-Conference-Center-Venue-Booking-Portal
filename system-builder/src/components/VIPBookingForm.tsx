@@ -308,7 +308,13 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
   const updateSchedule = (index: number, field: keyof DailySchedule, value: string | boolean) => {
     setForm(prev => {
       const newSchedules = [...prev.dailySchedules];
-      newSchedules[index] = { ...newSchedules[index], [field]: value };
+      if (field === 'allDay' && value === true) {
+        newSchedules[index] = { ...newSchedules[index], allDay: true, startTime: '08:30', endTime: '17:30' };
+      } else if (field === 'allDay' && value === false) {
+        newSchedules[index] = { ...newSchedules[index], allDay: false };
+      } else {
+        newSchedules[index] = { ...newSchedules[index], [field]: value };
+      }
       return { ...prev, dailySchedules: newSchedules };
     });
   };

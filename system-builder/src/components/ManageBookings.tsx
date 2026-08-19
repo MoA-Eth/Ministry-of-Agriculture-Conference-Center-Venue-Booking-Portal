@@ -181,10 +181,10 @@ export default function ManageBookings() {
         const tSched = targetBooking.daily_schedules || targetBooking.dailySchedules;
         const oSched = other.daily_schedules || other.dailySchedules;
 
-        const myStart = tSched?.[0]?.startTime || targetBooking.start_time || targetBooking.startTime || '00:00';
-        const myEnd = tSched?.[0]?.endTime || targetBooking.end_time || targetBooking.endTime || '23:59';
-        const otherStart = oSched?.[0]?.startTime || other.start_time || other.startTime || '00:00';
-        const otherEnd = oSched?.[0]?.endTime || other.end_time || other.endTime || '23:59';
+        const myStart = (tSched?.[0]?.allDay ? '08:30' : (tSched?.[0]?.startTime || targetBooking.start_time || targetBooking.startTime)) || '08:30';
+        const myEnd = (tSched?.[0]?.allDay ? '17:30' : (tSched?.[0]?.endTime || targetBooking.end_time || targetBooking.endTime)) || '17:30';
+        const otherStart = (oSched?.[0]?.allDay ? '08:30' : (oSched?.[0]?.startTime || other.start_time || other.startTime)) || '08:30';
+        const otherEnd = (oSched?.[0]?.allDay ? '17:30' : (oSched?.[0]?.endTime || other.end_time || other.endTime)) || '17:30';
 
         return myStart < otherEnd && myEnd > otherStart;
       });
@@ -801,7 +801,7 @@ export default function ManageBookings() {
                               <div key={dIdx} className="flex justify-between items-center text-xs font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
                                 <span className="text-slate-700">{toGregDateString(ds.date)}</span>
                                 <span className="text-[#268053] bg-emerald-50 px-2 py-0.5 rounded">
-                                  {ds.allDay ? 'Full Day' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)}`}
+                                  {ds.allDay ? 'Full Day (08:30 AM - 05:30 PM)' : `${toEthTime(ds.startTime)} - ${toEthTime(ds.endTime)}`}
                                 </span>
                               </div>
                             ))}
