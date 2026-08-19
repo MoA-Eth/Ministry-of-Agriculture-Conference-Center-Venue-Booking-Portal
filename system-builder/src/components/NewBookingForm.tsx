@@ -739,7 +739,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                             <div className="flex items-center gap-1.5">
                               <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Available Slots:</span>
                               <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                                All Day (2:30 Morning - 11:30 Afternoon / 08:30 - 17:30)
+                                All Day (8:30 AM - 5:30 PM)
                               </span>
                             </div>
                           )}
