@@ -713,7 +713,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                 <div className="flex flex-wrap gap-1.5">
                                   {dayExisting.map((ex, bIdx) => (
                                     <span key={bIdx} className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                      {toEthTime(ex.start)} - {toEthTime(ex.end)} ({ex.start} - {ex.end})
+                                      {toEthTime(ex.start)} - {toEthTime(ex.end)}
                                     </span>
                                   ))}
                                 </div>
@@ -724,7 +724,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                   {dayAvailable.length > 0 ? (
                                     dayAvailable.map((slot, aIdx) => (
                                       <span key={aIdx} className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                                        {toEthTime(slot.start)} - {toEthTime(slot.end)} ({slot.start} - {slot.end})
+                                        {toEthTime(slot.start)} - {toEthTime(slot.end)}
                                       </span>
                                     ))
                                   ) : (
