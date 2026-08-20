@@ -1,16 +1,16 @@
 import { Venue, TechnicalService, SupportService, Booking } from './types';
 
 export const venues: Venue[] = [
-  { id: 'v1', name: 'Abol Hall', type: 'Cinema', capacity: 850, bestFor: 'Large conferences & national events', price: null },
-  { id: 'v2', name: 'Adey Hall', type: 'Theatre/Auditorium', capacity: 90, bestFor: 'Workshops & panel discussions', price: null },
-  { id: 'v3', name: 'Adey Hall A', type: 'Theatre/Auditorium', capacity: 50, bestFor: 'Mid-size trainings & symposia', price: null },
-  { id: 'v4', name: 'Adey Hall B', type: 'Theatre/Auditorium', capacity: 40, bestFor: 'Breakout sessions', price: null },
-  { id: 'v5', name: 'Lamebora Hall', type: 'Meeting', capacity: 40, bestFor: 'Standard meetings', price: null },
-  { id: 'v6', name: 'Lamebora Hall A', type: 'Meeting', capacity: 26, bestFor: 'Small meetings', price: null },
-  { id: 'v7', name: 'Lamebora Hall B', type: 'Meeting', capacity: 14, bestFor: 'Very small meetings', price: null },
-  { id: 'v8', name: 'VIP Board Room', type: 'Boardroom', capacity: 12, bestFor: 'High-level / ministerial meetings', price: null },
-  { id: 'v9', name: 'VIP Lounge Area', type: 'Lounge', capacity: null, bestFor: 'Networking & refreshments', price: null },
-  { id: 'v10', name: 'VIP Refreshment Area', type: 'Refreshment', capacity: null, bestFor: 'Catering support', price: null },
+  { id: 'v1', name: 'Abol Hall', type: 'Cinema', capacity: 850, bestFor: 'Large conferences & national events', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts3', 'ts4', 'ts5', 'ts6', 'ts7', 'ts9', 'ts10', 'ts11', 'ts12'] },
+  { id: 'v2', name: 'Adey Hall', type: 'Theatre/Auditorium', capacity: 90, bestFor: 'Workshops & panel discussions', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts3', 'ts4', 'ts5', 'ts6', 'ts7', 'ts12'] },
+  { id: 'v3', name: 'Adey Hall A', type: 'Theatre/Auditorium', capacity: 50, bestFor: 'Mid-size trainings & symposia', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts3', 'ts5', 'ts6', 'ts12'] },
+  { id: 'v4', name: 'Adey Hall B', type: 'Theatre/Auditorium', capacity: 40, bestFor: 'Breakout sessions', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts5', 'ts6'] },
+  { id: 'v5', name: 'Lamebora Hall', type: 'Meeting', capacity: 40, bestFor: 'Standard meetings', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts3', 'ts5', 'ts12'] },
+  { id: 'v6', name: 'Lamebora Hall A', type: 'Meeting', capacity: 26, bestFor: 'Small meetings', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts5'] },
+  { id: 'v7', name: 'Lamebora Hall B', type: 'Meeting', capacity: 14, bestFor: 'Very small meetings', price: null, status: 'vacant', included_services: ['ts1', 'ts2'] },
+  { id: 'v8', name: 'VIP Board Room', type: 'Boardroom', capacity: 12, bestFor: 'High-level / ministerial meetings', price: null, status: 'vacant', included_services: ['ts1', 'ts2', 'ts3', 'ts4', 'ts5', 'ts6', 'ts7', 'ts9', 'ts12'] },
+  { id: 'v9', name: 'VIP Lounge Area', type: 'Lounge', capacity: null, bestFor: 'Networking & refreshments', price: null, status: 'vacant', included_services: ['ts1', 'ts5'] },
+  { id: 'v10', name: 'VIP Refreshment Area', type: 'Refreshment', capacity: null, bestFor: 'Catering support', price: null, status: 'vacant', included_services: [] },
 ];
 
 export const technicalServices: TechnicalService[] = [

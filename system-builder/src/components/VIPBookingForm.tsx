@@ -177,9 +177,17 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     }
   }, [form.startDate, form.endDate]);
 
+  const supportedTechnicalServices = useMemo(() => {
+    if (!selectedVenue) return [];
+    const v = selectedVenue as any;
+    const supportedIds = (v.technicalServices || v.technical_services || v.includedServices || v.included_services || []).map(String);
+    return technicalServices.filter(s => supportedIds.includes(s.id?.toString() || ''));
+  }, [selectedVenue, technicalServices]);
+
   const isServiceIncluded = (type: 'technicalServices' | 'supportServices', serviceId: string) => {
     if (!selectedVenue || type === 'supportServices') return false;
-    const includedIds = (selectedVenue.technicalServices || selectedVenue.technical_services || selectedVenue.includedServices || selectedVenue.included_services || []);
+    const v = selectedVenue as any;
+    const includedIds = (v.technicalServices || v.technical_services || v.includedServices || v.included_services || []);
     return includedIds.map(String).includes(String(serviceId));
   };
 
@@ -212,10 +220,25 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
         }
       }
 
-      if (!form.participantCount || isNaN(parseInt(form.participantCount)) || parseInt(form.participantCount) <= 0) {
+      const pCount = parseInt(form.participantCount);
+      if (form.participantCount === '' || isNaN(pCount)) {
         errs.participantCount = 'Required';
-      } else if (selectedVenue && parseInt(form.participantCount) > selectedVenue.capacity) {
-        errs.participantCount = `Max: ${selectedVenue.capacity} allowed`;
+      } else if (selectedVenue && (selectedVenue.capacity === 0 || selectedVenue.capacity === null)) {
+        if (pCount < 0) {
+          errs.participantCount = 'Must be 0 or more';
+        } else if (pCount > 0) {
+          errs.participantCount = 'Max: 0 allowed for this venue';
+        }
+      } else if (selectedVenue && selectedVenue.capacity > 0) {
+        if (pCount <= 0) {
+          errs.participantCount = 'Must be at least 1';
+        } else if (pCount > selectedVenue.capacity) {
+          errs.participantCount = `Max: ${selectedVenue.capacity} allowed`;
+        }
+      } else {
+        if (pCount < 0) {
+          errs.participantCount = 'Must be 0 or more';
+        }
       }
 
       setClashWarning(null);
@@ -452,7 +475,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
                  <label className={`text-[10px] font-bold uppercase mb-2 block transition-colors ${errors.participantCount ? 'text-red-500' : 'text-slate-400'}`}>
                    Attendees * {errors.participantCount && <span className="text-red-500 ml-2">{errors.participantCount}</span>}
                  </label>
-                 <input type="number" min="1" value={form.participantCount} onChange={e => setForm(p => ({ ...p, participantCount: e.target.value }))} className={inputClass('participantCount')} />
+                  <input type="number" min={selectedVenue && selectedVenue.capacity === 0 ? "0" : "1"} value={form.participantCount} onChange={e => setForm(p => ({ ...p, participantCount: e.target.value }))} className={inputClass('participantCount')} placeholder={selectedVenue && selectedVenue.capacity === 0 ? "0" : "Number of attendees"} />
               </div>
             </div>
 
@@ -531,35 +554,41 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
 
         {currentStep === 3 && (
           <div className="space-y-6 animate-in fade-in">
-             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {technicalServices.map(s => {
-                  const isIncluded = isServiceIncluded('technicalServices', s.id?.toString() || '');
-                  const isSelected = form.technicalServices.includes(s.id?.toString() || '');
-                  
-                  return (
-                    <div 
-                      key={s.id} 
-                      onClick={() => !isIncluded && toggleService('technicalServices', s.id?.toString() || '')} 
-                      className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
-                        isIncluded 
-                          ? 'border-emerald-200 bg-emerald-50/40 opacity-90 cursor-not-allowed'
-                          : isSelected 
-                            ? 'border-purple-600 bg-purple-50 shadow-md scale-[1.02] cursor-pointer' 
-                            : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50 cursor-pointer'
-                      }`}
-                    >
-                      <p className={`text-xs font-black uppercase tracking-tight py-1 ${isIncluded || isSelected ? 'text-purple-900' : 'text-slate-600'}`}>
-                        {s.name}
-                      </p>
-                      {isIncluded ? (
-                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1 flex items-center gap-1">
-                          Included in Hall
+             {supportedTechnicalServices.length > 0 ? (
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {supportedTechnicalServices.map(s => {
+                    const isIncluded = isServiceIncluded('technicalServices', s.id?.toString() || '');
+                    const isSelected = form.technicalServices.includes(s.id?.toString() || '');
+                    
+                    return (
+                      <div 
+                        key={s.id} 
+                        onClick={() => !isIncluded && toggleService('technicalServices', s.id?.toString() || '')} 
+                        className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                          isIncluded 
+                            ? 'border-emerald-200 bg-emerald-50/40 opacity-90 cursor-not-allowed'
+                            : isSelected 
+                              ? 'border-purple-600 bg-purple-50 shadow-md scale-[1.02] cursor-pointer' 
+                              : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        <p className={`text-xs font-black uppercase tracking-tight py-1 ${isIncluded || isSelected ? 'text-purple-900' : 'text-slate-600'}`}>
+                          {s.name}
                         </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-             </div>
+                        {isIncluded ? (
+                          <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1 flex items-center gap-1">
+                            Included in Hall
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+               </div>
+             ) : (
+               <div className="p-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-center text-xs font-bold text-slate-500">
+                 This venue does not support technical services.
+               </div>
+             )}
 
              <div className="mt-12 p-5 rounded-[1.5rem] bg-slate-50 border border-slate-100 shadow-inner">
                 <div className="flex items-center gap-3 mb-4">

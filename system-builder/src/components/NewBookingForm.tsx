@@ -130,9 +130,17 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const selectedVenue = venues?.find(v => v.id?.toString() === form.venueId?.toString());
 
+  const supportedTechnicalServices = useMemo(() => {
+    if (!selectedVenue) return [];
+    const v = selectedVenue as any;
+    const supportedIds = (v.technicalServices || v.technical_services || v.includedServices || v.included_services || []).map(String);
+    return technicalServices.filter(s => supportedIds.includes(s.id?.toString() || ''));
+  }, [selectedVenue, technicalServices]);
+
   const isServiceIncluded = (type: 'technicalServices' | 'supportServices', serviceId: string) => {
     if (!selectedVenue || type === 'supportServices') return false;
-    const includedIds = (selectedVenue.technicalServices || selectedVenue.technical_services || selectedVenue.includedServices || selectedVenue.included_services || []);
+    const v = selectedVenue as any;
+    const includedIds = (v.technicalServices || v.technical_services || v.includedServices || v.included_services || []);
     return includedIds.map(String).includes(String(serviceId));
   };
 
@@ -395,10 +403,25 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
         }
       }
       
-      if (!form.participantCount || isNaN(parseInt(form.participantCount)) || parseInt(form.participantCount) <= 0) {
+      const pCount = parseInt(form.participantCount);
+      if (form.participantCount === '' || isNaN(pCount)) {
         errs.participantCount = 'Required';
-      } else if (selectedVenue && parseInt(form.participantCount) > selectedVenue.capacity) {
-        errs.participantCount = `Max: ${selectedVenue.capacity} allowed`;
+      } else if (selectedVenue && (selectedVenue.capacity === 0 || selectedVenue.capacity === null)) {
+        if (pCount < 0) {
+          errs.participantCount = 'Must be 0 or more';
+        } else if (pCount > 0) {
+          errs.participantCount = 'Max: 0 allowed for this venue';
+        }
+      } else if (selectedVenue && selectedVenue.capacity > 0) {
+        if (pCount <= 0) {
+          errs.participantCount = 'Must be at least 1';
+        } else if (pCount > selectedVenue.capacity) {
+          errs.participantCount = `Max: ${selectedVenue.capacity} allowed`;
+        }
+      } else {
+        if (pCount < 0) {
+          errs.participantCount = 'Must be 0 or more';
+        }
       }
 
       if (dailyConflicts.some(c => c.type === 'hard_overlap' || c.type === 'cleaning')) {
@@ -625,7 +648,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                     <Users size={14}/> Expected Max *
                     {errors.participantCount && <span className="text-[9px] bg-red-100 px-2 py-0.5 rounded text-red-700 ml-auto font-bold">{errors.participantCount}</span>}
                   </label>
-                  <input type="number" min="1" value={form.participantCount} onChange={e => setForm(p => ({ ...p, participantCount: e.target.value }))} className={`${inputClass('participantCount')} ${errors.participantCount ? 'border-red-400 bg-red-50 text-red-900 ring-4 ring-red-500/20' : ''}`} placeholder="Number of attendees" />
+                  <input type="number" min={selectedVenue && selectedVenue.capacity === 0 ? "0" : "1"} value={form.participantCount} onChange={e => setForm(p => ({ ...p, participantCount: e.target.value }))} className={`${inputClass('participantCount')} ${errors.participantCount ? 'border-red-400 bg-red-50 text-red-900 ring-4 ring-red-500/20' : ''}`} placeholder={selectedVenue && selectedVenue.capacity === 0 ? "0" : "Number of attendees"} />
                 </div>
               </div>
 
@@ -773,7 +796,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
             <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
               <div className="grid md:grid-cols-2 gap-10">
                 {['Technical', 'Hospitality'].map((l, i) => {
-                  const list = i === 0 ? technicalServices : [];
+                  const list = i === 0 ? supportedTechnicalServices : [];
                   const formList = i === 0 ? form.technicalServices : form.supportServices;
                   const type = i === 0 ? 'technicalServices' : 'supportServices';
                   
@@ -820,9 +843,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               )
                             })
                           ) : (
-                            <div className="text-[10px] font-bold text-slate-400 italic py-4 flex items-center gap-2 animate-pulse">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
-                              Checking available services...
+                            <div className="text-xs font-medium text-slate-500 italic py-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-white">
+                              This venue does not support technical services.
                             </div>
                           )}
                         </div>
