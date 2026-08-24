@@ -193,7 +193,7 @@ function ScheduleCarousel({ bookings, onSelect, toEthTime }: ScheduleCarouselPro
         {pages.map((page, pIdx) => (
           <div key={pIdx} className="w-full shrink-0 space-y-2 px-0.5">
             {page.map((b) => {
-              const isConfirmed = ['paid', 'approved'].includes(b.status.toLowerCase());
+              const isConfirmed = ['paid', 'approved', 'partial_paid', 'confirmed'].includes((b.status || '').toLowerCase());
 
               return (
                 <button
@@ -275,12 +275,12 @@ export default function LandingPage() {
     fetchPublicBookings();
   }, []);
 
-  const ACTIVE_STATUSES = ['pending', 'partial_paid', 'paid', 'approved'];
+  const CONFIRMED_PAID_STATUSES = ['paid', 'partial_paid', 'approved', 'confirmed'];
 
   const getVenueStatus = (venueId: string) => {
     const now = new Date();
     const todayStr = format(now, 'yyyy-MM-dd');
-    const activeBookings = bookings.filter(b => b.venueId === venueId && ACTIVE_STATUSES.includes(b.status));
+    const activeBookings = bookings.filter(b => b.venueId === venueId && CONFIRMED_PAID_STATUSES.includes((b.status || '').toLowerCase()));
 
     for (const b of activeBookings) {
       let todayStartTime: string | null = null;
@@ -337,7 +337,7 @@ export default function LandingPage() {
     const nowTimeStr = format(now, 'HH:mm');
 
     const entries: Booking[] = [];
-    const activeBookings = bookings.filter(b => b.venueId === venueId && ACTIVE_STATUSES.includes(b.status));
+    const activeBookings = bookings.filter(b => b.venueId === venueId && CONFIRMED_PAID_STATUSES.includes((b.status || '').toLowerCase()));
 
     for (const b of activeBookings) {
       if (b.dailySchedules && b.dailySchedules.length > 0) {
