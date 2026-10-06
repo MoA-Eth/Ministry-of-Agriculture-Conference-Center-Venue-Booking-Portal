@@ -262,6 +262,7 @@ class EmailTemplate(models.Model):
         ('reminder_24h', '24h Event Reminder'),
         ('reminder_48h_pay', '48h Payment Expiration'),
         ('last_day', 'Meeting Conclusion'),
+        ('event_mgmt_notification', 'Event Mgmt Team — Approval Alert'),
     ]
     trigger = models.CharField(max_length=50, choices=TRIGGER_CHOICES, unique=True)
     subject = models.CharField(max_length=255)

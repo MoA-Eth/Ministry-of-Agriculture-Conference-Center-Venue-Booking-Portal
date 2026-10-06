@@ -156,6 +156,12 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True 
 CORS_ALLOW_CREDENTIALS = True
 
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'cache-control',
+    'pragma',
+]
+
 # CRITICAL: This allows your frontend to perform POST/PATCH/DELETE actions
 CSRF_TRUSTED_ORIGINS = [
     "https://moa-conference-portal.onrender.com",

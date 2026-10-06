@@ -54,7 +54,7 @@ function DeleteConfirmModal({ user, onConfirm, onCancel }: { user: SystemUser; o
 }
 
 export default function UserManagement() {
-  const { token } = useApp();
+  const { token, user: currentUser } = useApp();
 
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +201,6 @@ export default function UserManagement() {
 
   // Stats
   const stats = Object.entries(roleConfig)
-    .filter(([key]) => key !== 'system_admin')
     .map(([key, cfg]) => ({
       role: key as UserRole,
       label: cfg.label,
@@ -352,16 +351,24 @@ export default function UserManagement() {
                     onChange={e => setRole(e.target.value as UserRole)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white appearance-none cursor-pointer"
                   >
-                    {Object.entries(roleConfig).filter(([v]) => v !== 'system_admin').map(([val, cfg]) => (
+                    {Object.entries(roleConfig).map(([val, cfg]) => (
                       <option key={val} value={val}>{cfg.icon} {cfg.label}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
                 {/* Role preview badge */}
-                <div className="mt-2">
+                <div className="mt-2 flex items-center justify-between">
                   <RoleBadge role={role} />
                 </div>
+                {role === 'system_admin' && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs flex items-start gap-2">
+                    <span className="text-sm shrink-0">🔐</span>
+                    <p className="leading-relaxed">
+                      <strong>Full Platform Authority:</strong> System Administrators have full administrative access to user accounts, business rules, logs, and all system operations.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 pt-2">
@@ -416,7 +423,7 @@ export default function UserManagement() {
                 className="pl-4 pr-9 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold text-slate-700 bg-slate-50 focus:bg-white appearance-none cursor-pointer"
               >
                 <option value="all">All Roles</option>
-                {Object.entries(roleConfig).filter(([v]) => v !== 'system_admin').map(([val, cfg]) => (
+                {Object.entries(roleConfig).map(([val, cfg]) => (
                   <option key={val} value={val}>{cfg.label}</option>
                 ))}
               </select>
@@ -471,6 +478,11 @@ export default function UserManagement() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-slate-900 text-base">{u.name}</h4>
+                      {currentUser?.email === u.email && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          You
+                        </span>
+                      )}
                       {u.role === 'system_admin' && (
                         <Crown className="w-4 h-4 text-amber-500 shrink-0" />
                       )}
@@ -503,13 +515,15 @@ export default function UserManagement() {
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => setDeleteTarget(u)}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm bg-white border border-slate-100"
-                      title="Remove user"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {currentUser?.email !== u.email && (
+                      <button
+                        onClick={() => setDeleteTarget(u)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm bg-white border border-slate-100"
+                        title="Remove user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

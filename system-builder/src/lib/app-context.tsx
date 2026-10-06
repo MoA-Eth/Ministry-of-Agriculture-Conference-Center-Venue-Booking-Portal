@@ -47,27 +47,40 @@ const AppContext = createContext<AppContextType | null>(null);
 // =======================================================
 // CRASH-PROOF MAPPERS (Prevents the White Screen of Death)
 // =======================================================
-export const mapBooking = (b: any): Booking => ({
-  id: b.id?.toString() || '',
-  userId: b.user ? b.user.toString() : null,
-  venueId: b.venue?.toString() || '',
-  venueName: b.venue_name || 'Unknown Venue',
-  eventTitle: b.event_title || 'Untitled Event',
-  eventDescription: b.event_description || '',
-  organizerName: b.organizer_name || 'Unknown Organizer',
-  organizerEmail: b.organizer_email || '',
-  organizerPhone: b.organizer_phone || '',
-  organizerOrganization: b.organization || '',
-  startDate: b.start_date || '',
-  endDate: b.end_date || '',
-  startTime: b.start_time?.substring(0, 5) || '',
-  endTime: b.end_time?.substring(0, 5) || '',
-  dailySchedules: b.daily_schedules || [],
-  participantCount: b.participant_count || 0,
-  status: b.status || 'reserved',
-  // Safely mapping arrays so it never crashes!
-  technicalServices: (b.technical_services || []).map((id: any) => id?.toString()),
-  supportServices: (b.support_services || []).map((id: any) => id?.toString()),
+export const mapBooking = (b: any): Booking => {
+  let schedules = b.daily_schedules || [];
+  if (typeof schedules === 'string') {
+    try {
+      schedules = JSON.parse(schedules);
+    } catch {
+      schedules = [];
+    }
+  }
+  if (!Array.isArray(schedules)) {
+    schedules = [];
+  }
+
+  return {
+    id: b.id?.toString() || '',
+    userId: b.user ? b.user.toString() : null,
+    venueId: b.venue?.toString() || '',
+    venueName: b.venue_name || 'Unknown Venue',
+    eventTitle: b.event_title || 'Untitled Event',
+    eventDescription: b.event_description || '',
+    organizerName: b.organizer_name || 'Unknown Organizer',
+    organizerEmail: b.organizer_email || '',
+    organizerPhone: b.organizer_phone || '',
+    organizerOrganization: b.organization || '',
+    startDate: b.start_date || '',
+    endDate: b.end_date || '',
+    startTime: b.start_time?.substring(0, 5) || '',
+    endTime: b.end_time?.substring(0, 5) || '',
+    dailySchedules: schedules,
+    participantCount: b.participant_count || 0,
+    status: (b.status || 'pending').toLowerCase(),
+    // Safely mapping arrays so it never crashes!
+    technicalServices: (b.technical_services || []).map((id: any) => id?.toString()),
+    supportServices: (b.support_services || []).map((id: any) => id?.toString()),
   letterAttachment: b.letter_attachment ? (b.letter_attachment.startsWith('http') ? b.letter_attachment : `${SERVER_URL}${b.letter_attachment}`) : null,
   ictAcknowledged: b.ict_acknowledged || false,
   unavailableTechnicalServices: (b.unavailable_technical_services || []).map((id: any) => id?.toString()),
@@ -80,7 +93,8 @@ export const mapBooking = (b: any): Booking => ({
   totalPrice: Number(b.total_price || 0),
   managementApprovedBy: b.management_approved_by_name || null,
   managementApprovedAt: b.management_approved_at || null,
-});
+  };
+};
 
 const mapVenue = (v: any): Venue => ({
   id: v.id?.toString() || '',
@@ -228,18 +242,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
         if (currentToken) headers['Authorization'] = `Token ${currentToken}`;
 
-        // Always fetch public bookings so the calendar is consistent for
-        // both guests and logged-in organizers. If logged in, also fetch
-        // the user's own private bookings so they can see their own details.
+        const ts = Date.now();
+        // Always fetch public bookings with all=true & cache-busting so calendar is immediate
         const publicHeaders: HeadersInit = { 'Content-Type': 'application/json' };
         const fetchPromises: any[] = [
-          fetch(`${API_BASE}/bookings/?public=true`, { headers: publicHeaders }), // always public
-          fetch(`${API_BASE}/venues/`, { headers }),
-          fetch(`${API_BASE}/technical-services/`, { headers }),
-          fetch(`${API_BASE}/support-services/`, { headers }),
+          fetch(`${API_BASE}/bookings/?public=true&all=true&_t=${ts}`, { headers: publicHeaders }),
+          fetch(`${API_BASE}/venues/?_t=${ts}`, { headers }),
+          fetch(`${API_BASE}/technical-services/?_t=${ts}`, { headers }),
+          fetch(`${API_BASE}/support-services/?_t=${ts}`, { headers }),
           ...(currentToken ? [
-            fetch(`${API_BASE}/bookings/`, { headers }),          // own bookings
-            fetch(`${API_BASE}/audit-logs/`, { headers }),
+            fetch(`${API_BASE}/bookings/?all=true&_t=${ts}`, { headers }),
+            fetch(`${API_BASE}/audit-logs/?_t=${ts}`, { headers }),
           ] : [])
         ];
 
@@ -275,18 +288,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...ownBookings,
         ];
 
-        // PRIVACY SHIELD – hide other people's details from organizer view
+        // PRIVACY SHIELD – guest users and event organizers never see private details of other events
+        const isStaffAdmin = Boolean(currentToken) && ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role);
         const securedBookings = mergedRaw.map((b: Booking) => {
-          const isAdmin = role !== 'organizer';
-          const isMyBooking = user && (
+          const isMyBooking = Boolean(currentToken) && user && (
             b.userId?.toString() === user.id?.toString() ||
             b.organizerEmail?.toLowerCase() === user.email?.toLowerCase()
           );
 
-          if (!isAdmin && !isMyBooking) {
+          if (!isStaffAdmin && !isMyBooking) {
+            const bStatus = (b.status || '').toLowerCase();
+            const isTentative = ['pending', 'management_approved'].includes(bStatus);
             return {
               ...b,
-              eventTitle: 'Reserved (Unavailable)',
+              eventTitle: isTentative ? 'Tentative Hold' : 'Reserved (Unavailable)',
               organizerName: 'Private Booking',
               organizerEmail: 'Hidden',
               organizerPhone: 'Hidden',
@@ -317,6 +332,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     fetchData();
+
+    // ── Auto-refresh polling every 25 seconds for live schedule synchronization ──
+    const interval = setInterval(fetchData, 25000);
+
+    // Refresh immediately when user refocuses the browser window
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [refreshTrigger, token, user, role]); // Removed getHeaders from dependency to prevent loops
 
   const servicePrices = useMemo(() => {

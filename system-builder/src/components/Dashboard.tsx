@@ -300,21 +300,45 @@ export default function Dashboard() {
   }, [bookings, selectedStatus]);
 
   // ─── CORE METRICS ──────────────────────────────────────────
-  const confirmedCount = activeOnlyBookings.filter(b => ['paid', 'confirmed', 'completed'].includes((b.status || '').toLowerCase())).length;
-  const pendingCount  = activeOnlyBookings.filter(b => ['pending', 'reserved'].includes((b.status || '').toLowerCase())).length;
-  const completedCount = activeOnlyBookings.filter(b => (b.status || '').toLowerCase() === 'completed').length;
-  const rejectedCount = rawBookings.filter(b => ['cancelled', 'rejected'].includes((b.status || '').toLowerCase())).length;
-  const activeBookings = activeOnlyBookings.filter(b => ['paid', 'partial_paid', 'confirmed', 'reserved', 'pending', 'management_approved', 'approved', 'override'].includes((b.status || '').toLowerCase()));
+  const approvedStatuses = ['management_approved', 'approved', 'partial_paid', 'paid', 'confirmed', 'completed', 'override'];
+  const rejectedStatuses = ['rejected', 'cancelled'];
+  const pendingStatuses  = ['pending', 'reserved'];
 
-  // Total Bookings and Total Participants reflect filtered bookings
-  const totalBookingsCount = activeOnlyBookings.length;
-  const totalParticipants = activeOnlyBookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+  const isApproved = (b: Booking) => {
+    const s = (b.status || '').toLowerCase();
+    return approvedStatuses.includes(s) || ((b.eventTitle || '').includes('VIP OVERRIDE') && !rejectedStatuses.includes(s));
+  };
 
+  const isRejected = (b: Booking) => {
+    const s = (b.status || '').toLowerCase();
+    return rejectedStatuses.includes(s);
+  };
 
-  const approvedCountForRate = activeOnlyBookings.filter(b => ['approved', 'confirmed', 'completed', 'override'].includes(b.status)).length;
-  const approvalRate = (approvedCountForRate + rejectedCount) > 0 
-    ? Math.round((approvedCountForRate / (approvedCountForRate + rejectedCount)) * 100) 
-    : 0;
+  const isPending = (b: Booking) => {
+    const s = (b.status || '').toLowerCase();
+    return pendingStatuses.includes(s);
+  };
+
+  const confirmedCount = bookings.filter(b => ['paid', 'confirmed', 'completed'].includes((b.status || '').toLowerCase())).length;
+  const pendingCount   = bookings.filter(isPending).length;
+  const completedCount = bookings.filter(b => (b.status || '').toLowerCase() === 'completed').length;
+  const rejectedCount  = bookings.filter(isRejected).length;
+  const approvedCount  = bookings.filter(isApproved).length;
+  const activeBookings = bookings.filter(b => !isRejected(b));
+
+  // Total Bookings and Total Participants across all bookings in scope (not active-only)
+  const totalBookingsCount = bookings.length;
+  const totalParticipants  = bookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+
+  // Approval Rate: Approved vs Decided (Approved + Rejected/Cancelled)
+  const totalDecided = approvedCount + rejectedCount;
+  const approvalRate = totalDecided > 0
+    ? Math.round((approvedCount / totalDecided) * 100)
+    : (bookings.length > 0 && approvedCount > 0 ? 100 : 0);
+
+  const approvalSubText = totalDecided > 0
+    ? `${approvedCount} approved · ${rejectedCount} rejected`
+    : (pendingCount > 0 ? `${pendingCount} awaiting approval` : 'No bookings in period');
 
   // ─── 1. REVENUE ANALYTICS (with Deductions) ────────────────
   const calculateAdjustedPrice = (b: Booking) => {
@@ -559,11 +583,10 @@ export default function Dashboard() {
   };
 
   // ─── TOP-LEVEL STAT CARDS ──────────────────────────────────
-  // NOTE: cancelled and rejected events are excluded from all headline stats
   const stats = [
-    { label: 'Total Bookings', value: totalBookingsCount, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: 'Active events only' },
-    { label: 'Approval Rate', value: `${approvalRate}%`, icon: <Target className="w-6 h-6 text-amber-400" />, bg: 'bg-[#1e1b10]', border: 'border-amber-500/20', sub: 'Approved vs Cancelled' },
-    { label: 'Total Participants', value: totalParticipants.toLocaleString(), icon: <Users className="w-6 h-6 text-blue-400" />, bg: 'bg-[#0f172a]', border: 'border-blue-500/20', sub: 'Active events only' },
+    { label: 'Total Bookings', value: totalBookingsCount, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: '' },
+    { label: 'Approval Rate', value: `${approvalRate}%`, icon: <Target className="w-6 h-6 text-amber-400" />, bg: 'bg-[#1e1b10]', border: 'border-amber-500/20', sub: approvalSubText },
+    { label: 'Total Participants', value: totalParticipants.toLocaleString(), icon: <Users className="w-6 h-6 text-blue-400" />, bg: 'bg-[#0f172a]', border: 'border-blue-500/20', sub: '' },
     ...(isAdmin ? [{ label: 'Confirmed Revenue', value: formatMoney(confirmedRevenue), icon: <Banknote className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#0d2818]', border: 'border-emerald-500/20', sub: 'From approved bookings' }] : []),
   ];
 
@@ -738,7 +761,7 @@ export default function Dashboard() {
               <div className="relative z-10">
                 <p className="text-3xl font-black text-white tracking-tight mb-1">{s.value}</p>
                 <p className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">{s.label}</p>
-                <p className="text-[10px] font-bold text-white/25 mt-2">{s.sub}</p>
+                <p className="text-[10px] font-bold text-white/40 mt-2 min-h-[16px]">{s.sub || ''}</p>
               </div>
             </div>
           </ScrollReveal>
@@ -836,7 +859,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight font-serif">Status Overview</h3>
-              <p className="text-xs text-slate-500 font-medium">{totalBookingsCount} active bookings</p>
+              <p className="text-xs text-slate-500 font-medium">{totalBookingsCount} total bookings</p>
             </div>
           </div>
           <div className="h-[200px]">

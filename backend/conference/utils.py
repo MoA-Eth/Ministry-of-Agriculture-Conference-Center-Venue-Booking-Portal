@@ -73,6 +73,7 @@ def _build_html_email(subject, body_text, booking, trigger_type):
         'rejected': '#ef4444',              # Red
         'cancelled': '#64748b',             # Slate
         'completed': '#1e293b',             # Dark Slate
+        'event_mgmt_notification': '#0d9488', # Teal
     }
     accent = colors.get(trigger_type, '#268053')
 
@@ -87,6 +88,7 @@ def _build_html_email(subject, body_text, booking, trigger_type):
         'rejected': 'Booking Not Possible',
         'cancelled': 'Booking Cancelled',
         'completed': 'Event Concluded',
+        'event_mgmt_notification': 'Ministry Approved',
     }
     status_label = labels.get(trigger_type, trigger_type.replace('_', ' ').title())
 
@@ -232,4 +234,119 @@ def log_action(user, action, details, request=None):
         action=action,
         details=details,
         ip_address=ip_address
-    )
+    )
+
+
+def send_event_management_approval_email(booking, approved_by=None):
+    """
+    Sends an email notification to the Event Management team whenever a
+    Ministry officer approves an incoming booking.
+    Subject and body are pulled from the EmailTemplate with trigger='event_mgmt_notification'
+    so they can be edited from the Message Center.
+    """
+    try:
+        from .models import SystemUser, EmailTemplate
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+
+        # 1. Gather all Event Management team emails
+        event_mgmt_emails = list(
+            SystemUser.objects.filter(role='event_management')
+            .exclude(email='')
+            .values_list('email', flat=True)
+        )
+        if not event_mgmt_emails:
+            event_mgmt_emails = list(
+                User.objects.filter(system_profile__role='event_management')
+                .exclude(email='')
+                .values_list('email', flat=True)
+            )
+        if not event_mgmt_emails:
+            default_fallback = getattr(settings, 'EVENT_MANAGEMENT_EMAIL', 'eventmanagement@moa.gov.et')
+            event_mgmt_emails = [default_fallback]
+
+        # Deduplicate
+        seen = set()
+        to_emails = [e.strip() for e in event_mgmt_emails if e and not (e.lower() in seen or seen.add(e.lower()))]
+
+        if not to_emails:
+            print("[EVENT MGMT EMAIL] No valid Event Management email addresses found.")
+            return False
+
+        # 2. Approver details
+        officer = approved_by or booking.management_approved_by
+        officer_name = 'Ministry Leadership'
+        if officer:
+            try:
+                officer_name = officer.system_profile.name
+            except Exception:
+                officer_name = officer.get_full_name() or officer.username
+
+        approval_time = (booking.management_approved_at or timezone.now()).strftime('%B %d, %Y at %I:%M %p UTC')
+
+        # 3. Format event metadata
+        date_str = (
+            booking.start_date.strftime('%B %d, %Y')
+            if booking.start_date == booking.end_date
+            else f"{booking.start_date.strftime('%B %d, %Y')} to {booking.end_date.strftime('%B %d, %Y')}"
+        )
+        tech_list = ", ".join([s.name for s in booking.technical_services.all()]) or "None"
+        supp_list = ", ".join([s.name for s in booking.support_services.all()]) or "None"
+
+        # 4. Load subject/body from DB template (editable in Message Center)
+        default_subject = "Ministry Approved Booking: {event} (Ref: MOA-BKG-{ref})"
+        default_body = (
+            "Dear Event Management Team,\n\n"
+            "The booking request for \"{event}\" has been reviewed and approved by Ministry Leadership ({officer}).\n\n"
+            "The request is now ready for Event Management review, scheduling verification, service coordination, and payment processing. Please log in to the portal to manage this booking."
+        )
+
+        try:
+            tmpl = EmailTemplate.objects.get(trigger='event_mgmt_notification')
+            raw_subject = tmpl.subject
+            raw_body = tmpl.body
+        except EmailTemplate.DoesNotExist:
+            raw_subject = default_subject
+            raw_body = default_body
+
+        # 5. Substitute placeholders
+        placeholders = {
+            '{name}': booking.organizer_name,
+            '{event}': booking.event_title,
+            '{venue}': booking.venue.name,
+            '{date}': date_str,
+            '{ref}': str(booking.id),
+            '{status}': 'Approved by MoA Management',
+            '{reason}': '',
+            '{officer}': officer_name,
+            '{approval_time}': approval_time,
+            '{org}': booking.organization or 'N/A',
+            '{tech}': tech_list,
+            '{support}': supp_list,
+            '{attendees}': str(booking.participant_count),
+        }
+        subject = raw_subject
+        body_text = raw_body
+        for key, value in placeholders.items():
+            subject = subject.replace(key, str(value))
+            body_text = body_text.replace(key, str(value))
+
+        # 6. HTML version using the standard branded email template design
+        body_html = _build_html_email(subject, body_text, booking, 'event_mgmt_notification')
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=body_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=to_emails,
+            reply_to=[settings.EMAIL_HOST_USER] if getattr(settings, 'EMAIL_HOST_USER', None) else None,
+        )
+        msg.attach_alternative(body_html, "text/html")
+        msg.send(fail_silently=False)
+
+        print(f"[EVENT MGMT EMAIL OK] Sent to {to_emails} for MOA-BKG-{booking.id}")
+        return True
+
+    except Exception as e:
+        print(f"[EVENT MGMT EMAIL ERROR] Failed to send to Event Management: {e}")
+        return False

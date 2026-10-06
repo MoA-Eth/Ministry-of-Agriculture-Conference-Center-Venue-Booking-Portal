@@ -252,7 +252,7 @@ export default function LandingPage() {
   // MOBILE MENU STATE
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const isPrivilegedUser = ['leadership', 'system_admin', 'event_management'].includes(role || '');
+  const isPrivilegedUser = Boolean(token) && ['leadership', 'system_admin', 'event_management', 'admin_finance'].includes(role || '');
 
   useEffect(() => {
     if (HERO_IMAGES.length <= 1) return;
@@ -265,15 +265,44 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchPublicBookings = async () => {
       try {
-        const res = await fetch(`${API_BASE}/bookings/?public=true`);
+        const res = await fetch(`${API_BASE}/bookings/?public=true&all=true&_t=${Date.now()}`);
         const data = await res.json();
-        setBookings((data.results || data).map(mapBooking));
+        const raw = (data.results || data).map(mapBooking);
+        const isPrivileged = Boolean(token) && ['leadership', 'system_admin', 'event_management', 'admin_finance'].includes(role || '');
+        const secured = raw.map((b: Booking) => {
+          if (!isPrivileged) {
+            const bStatus = (b.status || '').toLowerCase();
+            const isTentative = ['pending', 'management_approved'].includes(bStatus);
+            return {
+              ...b,
+              eventTitle: isTentative ? 'Tentative Hold' : 'Reserved (Unavailable)',
+              organizerName: 'Private Booking',
+              organizerEmail: 'Hidden',
+              organizerPhone: 'Hidden',
+              organizerOrganization: 'Protected',
+              eventDescription: 'This session has been reserved.',
+              letterAttachment: null,
+            };
+          }
+          return b;
+        });
+        setBookings(secured);
       } catch (error) {
         console.error('Failed to fetch public bookings:', error);
       }
     };
     fetchPublicBookings();
-  }, []);
+
+    const interval = setInterval(fetchPublicBookings, 30000);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') fetchPublicBookings();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [token, role]);
 
   const CONFIRMED_PAID_STATUSES = ['paid', 'partial_paid', 'approved', 'confirmed'];
 
@@ -385,7 +414,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden selection:bg-[#268053] selection:text-white">
 
-      {activeBooking && (
+      {activeBooking && isPrivilegedUser && (
         <EventDetailsModal
           booking={activeBooking}
           venueName={venues.find(v => v.id === activeBooking.venueId)?.name}
@@ -693,7 +722,9 @@ export default function LandingPage() {
                             return (
                               <ScheduleCarousel
                                 bookings={upcoming}
-                                onSelect={(b) => setActiveBooking(b)}
+                                onSelect={(b) => {
+                                  if (isPrivilegedUser) setActiveBooking(b);
+                                }}
                                 toEthTime={toEthTime}
                               />
                             );

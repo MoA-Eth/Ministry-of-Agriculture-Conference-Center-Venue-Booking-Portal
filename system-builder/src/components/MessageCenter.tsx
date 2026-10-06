@@ -7,19 +7,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-// Make triggers look professional in the UI
 const triggerLabels: Record<string, string> = {
   pending: 'Booking Received',
+  management_approved: 'Approved by MoA Management',
+  management_rejected: 'Rejected by MoA Management',
   partial_paid: 'Advance Paid',
   paid: 'Fully Paid (Confirmed)',
   approved: 'VIP Approved',
-  rejected: 'Rejected / Overridden',
+  rejected: 'Rejected',
   cancelled: 'Cancelled',
   completed: 'Event Completed',
   reminder_24h: '24h Reminder',
   reminder_48h_pay: 'Payment Expiration Warning',
-  last_day: 'Event Conclusion'
+  last_day: 'Event Conclusion',
+  event_mgmt_notification: 'Event Management Notification',
 };
+
 
 export default function MessageCenter() {
   const { token } = useApp();
@@ -128,7 +131,7 @@ export default function MessageCenter() {
           {templates.length === 0 ? (
             <p className="text-xs text-slate-400 italic px-4">No templates found in database.</p>
           ) : (
-            templates.map(t => (
+          templates.map(t => (
               <button
                 key={t.id}
                 onClick={() => setSelected(t)}
@@ -205,18 +208,17 @@ export default function MessageCenter() {
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-2xl flex items-start gap-3">
-                      <Info size={18} className="text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider mb-1">Placeholders</p>
-                        <p className="text-[10px] text-emerald-700 leading-relaxed font-medium italic">
-                          {"{name}, {event}, {venue}, {date}, {ref}, {reason}"}
-                        </p>
-                      </div>
+                  <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-2xl flex items-start gap-3">
+                    <Info size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider mb-1">Placeholders</p>
+                      <p className="text-[10px] text-emerald-700 leading-relaxed font-medium italic">
+                        {"{name}, {event}, {venue}, {date}, {ref}, {reason}, {officer}"}
+                      </p>
                     </div>
                   </div>
-                </div>
+                 </div>
+
               </div>
             </div>
           ) : (

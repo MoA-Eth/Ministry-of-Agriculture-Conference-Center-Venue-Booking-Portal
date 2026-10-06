@@ -16,7 +16,7 @@ interface CalendarProps {
   bookedDates?: Date[];
   partialBookedDates?: Date[];
   pendingDates?: Date[];
-  [key: string]: any; 
+  [key: string]: any;
 }
 
 export function GregorianCalendar({ selected, onSelect, bookedDates = [], partialBookedDates = [], pendingDates = [], allowPast = false }: CalendarProps & { allowPast?: boolean }) {
@@ -69,7 +69,7 @@ export function GregorianCalendar({ selected, onSelect, bookedDates = [], partia
     checkDate.setHours(0, 0, 0, 0);
     return checkDate < today;
   };
-  
+
   const isToday = (date: Date) => isSameDay(new Date(), date);
 
   const handleDateClick = (date: Date) => {

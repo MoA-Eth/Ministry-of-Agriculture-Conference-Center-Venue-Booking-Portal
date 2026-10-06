@@ -154,8 +154,8 @@ export default function ManageBookings() {
     e?.stopPropagation();
     const targetBooking = bookings.find(b => String(b.id) === String(id));
 
-    // --- UPGRADED CLASH ENGINE: Triggers for Advance, Full Pay, and VIP ---
-    if (targetBooking && ['partial_paid', 'paid', 'approved'].includes(status)) {
+    // --- UPGRADED CLASH ENGINE: Triggers for Management Approval, Advance, Full Pay, and VIP ---
+    if (targetBooking && ['management_approved', 'partial_paid', 'paid', 'approved'].includes(status)) {
       const clashingBooking = bookings.find(other => {
         // Don't compare the booking to itself
         if (String(other.id) === String(targetBooking.id)) return false;
@@ -165,8 +165,8 @@ export default function ManageBookings() {
         const oVenue = other.venue || other.venueId;
         if (String(oVenue) !== String(tVenue)) return false;
 
-        // If the other booking is already holding this slot with money or power, trigger clash!
-        if (!['partial_paid', 'paid', 'approved', 'completed'].includes(other.status?.toLowerCase())) return false;
+        // If the other booking is already holding this slot, trigger clash!
+        if (!['management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(other.status?.toLowerCase())) return false;
 
         const tStartD = targetBooking.start_date || targetBooking.startDate;
         const tEndD = targetBooking.end_date || targetBooking.endDate;
@@ -196,6 +196,7 @@ export default function ManageBookings() {
     }
 
     let msg = `Change status to ${status}?`;
+    if (status === 'management_approved') msg = 'Approve booking as MoA Management?';
     if (status === 'partial_paid') msg = 'Confirm Advance Payment received?';
     if (status === 'paid') msg = 'Confirm Full Payment received?';
     if (status === 'approved') msg = 'Approve VIP Override? WARNING: This will immediately REJECT any conflicting standard bookings.';

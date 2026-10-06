@@ -202,6 +202,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
     const errs: Record<string, string> = {};
     if (step === 1) {
       if (!form.organizerName.trim()) errs.organizerName = 'Name is required';
+      if (!form.organizerOrganization.trim()) errs.organizerOrganization = 'Organization/Department is required';
       if (!form.eventTitle.trim()) errs.eventTitle = 'Event Title is required';
       if (!form.organizerEmail.trim()) errs.organizerEmail = 'Email is required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) errs.organizerEmail = 'Invalid email';
@@ -248,7 +249,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
            errs.startDate = 'This date is already secured by another VIP Override.';
            toast.error('Another VIP has already secured these dates!');
         } else {
-           const regConflict = bookings.find(b => b.venueId.toString() === form.venueId.toString() && ['pending', 'partial_paid', 'paid'].includes(b.status.toLowerCase()) && b.startDate <= form.endDate && b.endDate >= form.startDate);
+           const regConflict = bookings.find(b => b.venueId.toString() === form.venueId.toString() && ['pending', 'management_approved', 'partial_paid', 'paid'].includes(b.status.toLowerCase()) && b.startDate <= form.endDate && b.endDate >= form.startDate);
            if (regConflict) {
               setClashWarning(`Warning: This VIP booking overlaps with "${regConflict.eventTitle || regConflict.event_title}". Proceeding will automatically cancel their booking.`);
            }
@@ -426,7 +427,7 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
             
             <div className="grid sm:grid-cols-2 gap-6">
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Name *</label><input value={form.organizerName} onChange={e => setForm(p => ({ ...p, organizerName: e.target.value }))} className={inputClass('organizerName')} />{errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}</div>
-              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization/Department</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} /></div>
+              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization/Department *</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} placeholder="Organization or Department" />{errors.organizerOrganization && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerOrganization}</p>}</div>
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Email *</label><input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} />{errors.organizerEmail && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerEmail}</p>}</div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Phone *</label>

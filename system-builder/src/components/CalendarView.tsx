@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { format, parseISO } from 'date-fns';
 import { Booking } from '@/lib/types';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw } from 'lucide-react';
 
 const GREG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const GREG_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -209,11 +209,28 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
 // --- Main View ---
 
 export default function CalendarView() {
-  const { bookings, venues, role, toEthTime } = useApp();
+  const { bookings, venues, role, token, toEthTime, refreshData } = useApp();
   const [selectedVenue, setSelectedVenue] = useState<string>('all');
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const isAdmin = ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
+  // Only authenticated staff/management can view administrative details and open modal
+  const isStaff = Boolean(token) && ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
+
+  // Auto-refresh when calendar view mounts and every 20 seconds while active
+  useEffect(() => {
+    refreshData();
+    const timer = setInterval(() => {
+      refreshData();
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [refreshData]);
+
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    refreshData();
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
 
   const now = new Date();
   const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() }); // month: 0..11
@@ -236,7 +253,7 @@ export default function CalendarView() {
   return (
     <div className="pb-12" style={{ animation: 'fade-in-up 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
       
-      {activeBooking && (
+      {isStaff && activeBooking && (
         <EventDetailsModal 
           booking={activeBooking} 
           onClose={() => setActiveBooking(null)} 
@@ -256,7 +273,7 @@ export default function CalendarView() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
           
           {/* Dynamic Legend based on Role */}
-          {isAdmin ? (
+          {isStaff ? (
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
               <span className="flex items-center gap-1.5 text-amber-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500" /> Pending</span>
               <span className="flex items-center gap-1.5 text-[#1b5e3a] whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#1b5e3a]" /> MoA Approved</span>
@@ -271,16 +288,27 @@ export default function CalendarView() {
             </div>
           )}
 
-          <div className="relative group w-full sm:w-auto shrink-0">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#268053]" />
-            <select
-              value={selectedVenue}
-              onChange={e => setSelectedVenue(e.target.value)}
-              className="w-full sm:w-48 text-xs sm:text-sm font-bold text-slate-700 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 bg-white shadow-sm focus:outline-none focus:border-[#268053] appearance-none cursor-pointer"
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative group flex-1 sm:w-auto shrink-0">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#268053]" />
+              <select
+                value={selectedVenue}
+                onChange={e => setSelectedVenue(e.target.value)}
+                className="w-full sm:w-48 text-xs sm:text-sm font-bold text-slate-700 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 bg-white shadow-sm focus:outline-none focus:border-[#268053] appearance-none cursor-pointer"
+              >
+                <option value="all">All Venues</option>
+                {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+
+            <button
+              onClick={handleManualRefresh}
+              title="Refresh calendar schedule"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:border-[#268053] hover:text-[#268053] text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 shrink-0"
             >
-              <option value="all">All Venues</option>
-              {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-[#268053]' : ''} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
         </div>
       </div>
@@ -333,9 +361,18 @@ export default function CalendarView() {
                  const dayBookings = bookings.filter(b => {
                     if (isPastDay) return false;
                     let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
-                    if (b.dailySchedules?.length) matchesDate = b.dailySchedules.some(s => s.date === dateStr);
+                    
+                    let schedules = b.dailySchedules;
+                    if (typeof schedules === 'string') {
+                      try { schedules = JSON.parse(schedules); } catch { schedules = []; }
+                    }
+                    if (Array.isArray(schedules) && schedules.length > 0) {
+                      matchesDate = schedules.some((s: any) => (s?.date || '').startsWith(dateStr));
+                    }
+
                     const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
-                    const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status);
+                    const bStatus = (b.status || '').trim().toLowerCase();
+                    const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(bStatus);
                     return matchesDate && matchVenue && validStatus;
                  });
 
@@ -350,7 +387,7 @@ export default function CalendarView() {
                      
                      <div className="flex-1 space-y-1 sm:space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
                        {!isPastDay && dayBookings.map(b => {
-                          const cfg = getStatusProps(b.status, isAdmin);
+                          const cfg = getStatusProps(b.status, isStaff);
                           const venueInfo = venues.find(v => v.id?.toString() === b.venueId?.toString());
                           const venueName = venueInfo?.name || 'Unknown Venue';
                           
@@ -359,9 +396,9 @@ export default function CalendarView() {
                               key={b.id} 
                               onClick={(e) => { 
                                 e.stopPropagation(); 
-                                if (isAdmin) setActiveBooking(b); 
+                                if (isStaff) setActiveBooking(b); 
                               }}
-                              className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all ${cfg.bg} ${cfg.border} ${cfg.borderLeft} ${isAdmin ? 'cursor-pointer hover:-translate-y-px hover:shadow-md' : 'cursor-default'}`}
+                              className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all ${cfg.bg} ${cfg.border} ${cfg.borderLeft} ${isStaff ? 'cursor-pointer hover:-translate-y-px hover:shadow-md' : 'cursor-default'}`}
                             >
                                <div className={`flex items-center justify-between gap-1 font-black text-[8px] sm:text-[10px] uppercase tracking-wider ${cfg.color} opacity-90`}>
                                   <span className="flex items-center gap-1 truncate">
@@ -370,18 +407,18 @@ export default function CalendarView() {
                                   </span>
                                </div>
                                
-                               {isAdmin && (
+                               {isStaff && (
                                  <div className="flex items-center gap-1 font-bold text-[9px] sm:text-xs truncate mt-[1px] sm:mt-0.5">
                                     <User size={10} className="shrink-0 opacity-60 text-slate-500 hidden sm:block" />
                                     <span className="truncate text-slate-700">{b.organizerName}</span>
                                  </div>
                                )}
 
-                               <div className={`text-[9px] sm:text-[10px] font-medium truncate opacity-90 ${isAdmin ? 'sm:pl-3.5 text-slate-600' : 'text-slate-800 font-bold'}`}>
+                               <div className={`text-[9px] sm:text-[10px] font-medium truncate opacity-90 ${isStaff ? 'sm:pl-3.5 text-slate-600' : 'text-slate-800 font-bold'}`}>
                                   {b.eventTitle}
                                </div>
 
-                               <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isAdmin ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
+                               <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isStaff ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
                                   <MapPin size={8} className="shrink-0 sm:w-[10px] sm:h-[10px]" />
                                   <span className="truncate">{venueName}</span>
                                </div>

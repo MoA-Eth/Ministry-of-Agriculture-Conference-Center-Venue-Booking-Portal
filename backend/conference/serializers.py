@@ -85,6 +85,7 @@ class SystemUserSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None)
         name = validated_data.get('name', '')
         email = validated_data.get('email', '')
+        role = validated_data.get('role', 'organizer')
         
         django_user = None
         if password:
@@ -92,12 +93,16 @@ class SystemUserSerializer(serializers.ModelSerializer):
             first_name = name_parts[0]
             last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
             
+            if User.objects.filter(username=email).exists():
+                raise serializers.ValidationError({'email': 'A user account with this email already exists.'})
+
             django_user = User.objects.create_user(
                 username=email, 
                 email=email, 
                 password=password, 
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                is_staff=(role == 'system_admin')
             )
         validated_data['user'] = django_user
         return SystemUser.objects.create(**validated_data)
@@ -107,6 +112,7 @@ class SystemUserSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None)
         new_email = validated_data.get('email', instance.email)
         new_name = validated_data.get('name', instance.name)
+        new_role = validated_data.get('role', instance.role)
         
         # Update SystemUser instance
         for attr, value in validated_data.items(): 
@@ -127,6 +133,11 @@ class SystemUserSerializer(serializers.ModelSerializer):
                 
                 if password: 
                     instance.user.set_password(password)
+
+                if new_role == 'system_admin':
+                    instance.user.is_staff = True
+                elif instance.user.is_staff and not instance.user.is_superuser:
+                    instance.user.is_staff = False
                 
                 instance.user.save()
             except Exception as e:
@@ -194,12 +205,26 @@ class BookingSerializer(serializers.ModelSerializer):
     booked_by_name = serializers.SerializerMethodField()
     management_approved_by_name = serializers.CharField(source='management_approved_by.system_profile.name', read_only=True)
     daily_schedules = DailySchedulesField(required=False, default=list)
+    organization = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=255,
+        error_messages={
+            'required': 'Organization/Department is required.',
+            'blank': 'Organization/Department cannot be blank.'
+        }
+    )
     
     assigned_tech = serializers.JSONField(required=False, write_only=True)
     technical_services = serializers.PrimaryKeyRelatedField(many=True, queryset=TechnicalService.objects.all(), required=False)
     support_services = serializers.PrimaryKeyRelatedField(many=True, queryset=SupportService.objects.all(), required=False)
     unavailable_technical_services = serializers.PrimaryKeyRelatedField(many=True, queryset=TechnicalService.objects.all(), required=False)
     unavailable_support_services = serializers.PrimaryKeyRelatedField(many=True, queryset=SupportService.objects.all(), required=False)
+
+    def validate_organization(self, value):
+        if not value or not str(value).strip():
+            raise serializers.ValidationError('Organization/Department is required.')
+        return str(value).strip()
 
     class Meta:
         model = Booking

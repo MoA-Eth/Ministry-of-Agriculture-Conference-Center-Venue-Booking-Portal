@@ -73,7 +73,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ currentPage, onNavigate, children }: AppShellProps) {
-  const { role, user, logout, token } = useApp();
+  const { role, user, logout, token, refreshData } = useApp();
   
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -83,19 +83,24 @@ export default function AppShell({ currentPage, onNavigate, children }: AppShell
   const fetchNotifications = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/notifications/`, {
-        headers: { 'Authorization': `Token ${token}` }
+      const res = await fetch(`${API_BASE}/notifications/?_t=${Date.now()}`, {
+        headers: { 
+          'Authorization': `Token ${token}`
+        }
       });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.results || data);
+        const incoming = data.results || data;
+        setNotifications(incoming);
       }
     } catch (err) { console.error("Notif fetch error", err); }
   };
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 15000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -108,6 +113,7 @@ export default function AppShell({ currentPage, onNavigate, children }: AppShell
         headers: { 'Authorization': `Token ${token}` }
       });
       fetchNotifications();
+      refreshData();
     } catch (err) { console.error(err); }
   };
 
@@ -121,6 +127,7 @@ export default function AppShell({ currentPage, onNavigate, children }: AppShell
         fetchNotifications();
       } catch (err) { console.error(err); }
     }
+    refreshData();
     if (n.link) {
       window.location.hash = n.link;
       setShowNotifications(false);
@@ -139,7 +146,7 @@ export default function AppShell({ currentPage, onNavigate, children }: AppShell
   }, []);
 
   const filteredNav = navItems.filter(item => {
-    if (!token && item.id === 'my-bookings') return false;
+    if (!token && (item.id === 'my-bookings' || item.id === 'profile-settings')) return false;
     return item.roles.includes(role);
   });
 

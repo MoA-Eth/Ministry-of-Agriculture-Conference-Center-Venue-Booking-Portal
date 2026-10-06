@@ -23,7 +23,7 @@ const timeToMinutes = (timeStr: string | undefined) => {
 const isFullDayBooked = (dateStr: string, schedules: any[]) => {
   const daySchedules = schedules.filter(s => s.date === dateStr && s.isHard);
   if (daySchedules.length === 0) return false;
-  
+
   const hasFullDaySingle = daySchedules.some(s => {
     const st = timeToMinutes(s.start);
     const en = timeToMinutes(s.end);
@@ -40,8 +40,8 @@ const isFullDayBooked = (dateStr: string, schedules: any[]) => {
 
   if (intervals.length === 0) return false;
   intervals.sort((a, b) => a.start - b.start);
-  
-  const merged: {start: number, end: number}[] = [];
+
+  const merged: { start: number, end: number }[] = [];
   intervals.forEach(curr => {
     if (merged.length === 0) { merged.push({ ...curr }); }
     else {
@@ -57,10 +57,10 @@ const isFullDayBooked = (dateStr: string, schedules: any[]) => {
 
 export default function NewBookingForm({ onComplete, hideHero = false }: { onComplete: () => void, hideHero?: boolean }) {
   const { bookings = [], venues = [], addBooking, user, technicalServices = [], supportServices = [], token, toEthTime } = useApp();
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [submittedBookingId, setSubmittedBookingId] = useState<string | null>(null);
-  
+
   const initialVenueId = useMemo(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -73,12 +73,12 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const [form, setForm] = useState({
     venueId: initialVenueId,
-    eventTitle: '', eventDescription: '', 
-    organizerName: user?.name || '', 
-    organizerOrganization: '', 
-    organizerEmail: user?.email || '', 
+    eventTitle: '', eventDescription: '',
+    organizerName: user?.name || '',
+    organizerOrganization: '',
+    organizerEmail: user?.email || '',
     organizerPhone: user?.phone || '',
-    startDate: '', endDate: '', participantCount: '', 
+    startDate: '', endDate: '', participantCount: '',
     technicalServices: [] as string[], supportServices: [] as string[],
     dailySchedules: [] as DailySchedule[], letterAttachment: null as File | null,
   });
@@ -93,7 +93,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       }));
     }
   }, [user]);
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -146,25 +146,41 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const existingSchedules = useMemo(() => {
     if (!form.venueId) return [];
-    
-    const vBookings = bookings?.filter(b => 
-      b.venueId?.toString() === form.venueId?.toString() && 
+
+    const vBookings = bookings?.filter(b =>
+      b.venueId?.toString() === form.venueId?.toString() &&
       ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '')
     );
-    
-    const schedules: { date: string, start: string, end: string, isHard: boolean }[] = [];
+
+    const schedules: { date: string, start: string, end: string, isHard: boolean, status: string, title?: string }[] = [];
     vBookings?.forEach(b => {
-      const isHard = ['partial_paid', 'paid', 'approved', 'completed'].includes(b.status?.toLowerCase() || '');
-      
+      const bStatus = b.status?.toLowerCase() || '';
+      const isHard = ['partial_paid', 'paid', 'approved', 'completed'].includes(bStatus);
+      const title = b.eventTitle || (b as any).event_title || '';
+
       if (b.dailySchedules && b.dailySchedules.length > 0) {
-        b.dailySchedules.forEach((ds: any) => schedules.push({ date: ds.date, start: ds.startTime, end: ds.endTime, isHard }));
+        b.dailySchedules.forEach((ds: any) => schedules.push({
+          date: ds.date,
+          start: ds.startTime || ds.start_time || '08:30',
+          end: ds.endTime || ds.end_time || '17:30',
+          isHard,
+          status: bStatus,
+          title
+        }));
       } else if (b.startDate && b.endDate) {
         try {
           const s = parseISO(b.startDate), e = parseISO(b.endDate);
-          if (s <= e) eachDayOfInterval({start: s, end: e}).forEach(d => {
-            schedules.push({ date: format(d, 'yyyy-MM-dd'), start: b.startTime || '01:00', end: b.endTime || '12:00', isHard });
+          if (s <= e) eachDayOfInterval({ start: s, end: e }).forEach(d => {
+            schedules.push({
+              date: format(d, 'yyyy-MM-dd'),
+              start: b.startTime || '08:30',
+              end: b.endTime || '17:30',
+              isHard,
+              status: bStatus,
+              title
+            });
           });
-        } catch {}
+        } catch { }
       }
     });
     return schedules;
@@ -236,13 +252,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const dailyConflicts = useMemo(() => {
     const issues: { date: string, type: 'hard_overlap' | 'soft_overlap' | 'cleaning', msg: string }[] = [];
-    
+
     form.dailySchedules?.forEach(newSched => {
       const dayExisting = existingSchedules.filter(ex => ex.date === newSched.date);
-      
+
       const nStart = timeToMinutes(newSched.startTime || '08:30');
       const nEnd = timeToMinutes(newSched.endTime || '17:30');
-      
+
       let hasHard = false;
       let hasSoft = false;
       let cleanMsg = '';
@@ -250,7 +266,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       dayExisting.forEach(ex => {
         const eStart = timeToMinutes(ex.start);
         const eEnd = timeToMinutes(ex.end);
-        
+
         if (nStart < eEnd && nEnd > eStart) {
           if (ex.isHard) hasHard = true;
           else hasSoft = true;
@@ -263,11 +279,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       });
 
       if (hasHard || (newSched.allDay && dayExisting.some(ex => ex.isHard))) {
-         issues.push({ date: newSched.date, type: 'hard_overlap', msg: 'Unavailable (Already Confirmed/Paid)' });
+        issues.push({ date: newSched.date, type: 'hard_overlap', msg: 'Unavailable (Already Confirmed / Paid)' });
       } else if (hasSoft || (newSched.allDay && dayExisting.some(ex => !ex.isHard))) {
-         issues.push({ date: newSched.date, type: 'soft_overlap', msg: 'Unpaid Pending Request Exists (First to pay secures slot)' });
+        issues.push({ date: newSched.date, type: 'soft_overlap', msg: 'Unavailable (Tentatively Booked / Pending Approval)' });
       } else if (cleanMsg) {
-         issues.push({ date: newSched.date, type: 'cleaning', msg: cleanMsg });
+        issues.push({ date: newSched.date, type: 'cleaning', msg: cleanMsg });
       }
     });
     return issues;
@@ -341,8 +357,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       const dates = [];
       const [sy, sm, sd] = form.startDate.split('-').map(Number);
       const [ey, em, ed] = form.endDate.split('-').map(Number);
-      let cur = new Date(sy, sm - 1, sd, 12, 0, 0); 
-      const end = new Date(ey, em - 1, ed, 12, 0, 0); 
+      let cur = new Date(sy, sm - 1, sd, 12, 0, 0);
+      const end = new Date(ey, em - 1, ed, 12, 0, 0);
       while (cur <= end && dates.length < 30) {
         dates.push(format(cur, 'yyyy-MM-dd'));
         cur.setDate(cur.getDate() + 1);
@@ -370,7 +386,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const vPrice = parseFloat(selectedVenue?.price || selectedVenue?.daily_rate || selectedVenue?.cost || 0);
   const venueTotal = vPrice * (form.dailySchedules?.length || 1);
-  
+
   const techFee = form.technicalServices.reduce((sum, id) => {
     const s = technicalServices.find(x => x.id?.toString() === id?.toString());
     return s ? sum + parseFloat(s.price || 0) : sum;
@@ -385,13 +401,14 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     const errs: Record<string, string> = {};
     if (step === 1) {
       if (!form.organizerName?.trim()) errs.organizerName = 'Required';
+      if (!form.organizerOrganization?.trim()) errs.organizerOrganization = 'Required';
       if (!form.eventTitle?.trim()) errs.eventTitle = 'Required';
       if (!form.organizerPhone?.trim() || form.organizerPhone.trim() === '+251') errs.organizerPhone = 'Required';
       if (!form.organizerEmail?.trim()) errs.organizerEmail = 'Required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) errs.organizerEmail = 'Invalid email';
     } else if (step === 2) {
       if (!form.venueId) errs.venueId = 'Select a venue';
-      
+
       if (!form.startDate || !form.endDate) {
         errs.startDate = 'Start and End dates are required';
       } else {
@@ -402,7 +419,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
           errs.startDate = `Business Rule: Minimum ${waitingPeriodHours} hour(s) advance notice required (Earliest date: ${format(minAllowedTime, 'MMM d, yyyy')})`;
         }
       }
-      
+
       const pCount = parseInt(form.participantCount);
       if (form.participantCount === '' || isNaN(pCount)) {
         errs.participantCount = 'Required';
@@ -424,8 +441,9 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
         }
       }
 
-      if (dailyConflicts.some(c => c.type === 'hard_overlap' || c.type === 'cleaning')) {
-        errs.rangeConflict = 'Please resolve hard time conflicts below.';
+      if (dailyConflicts.some(c => c.type === 'hard_overlap' || c.type === 'soft_overlap' || c.type === 'cleaning')) {
+        errs.rangeConflict = 'Please resolve time slot conflicts below. Tentative/pending and confirmed slots cannot be double-booked.';
+        toast.error("One or more time slots conflict with existing bookings (confirmed or tentative) or required cleaning intervals.");
       }
     } else if (step === 3) {
       if (!form.letterAttachment) {
@@ -451,6 +469,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+    if (dailyConflicts.some(c => c.type === 'hard_overlap' || c.type === 'soft_overlap' || c.type === 'cleaning')) {
+      toast.error("Please resolve time slot conflicts before submitting.");
+      setCurrentStep(2);
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     setUploadProgress(null);
@@ -458,7 +481,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       const finalTotal = venueTotal + serviceFee;
 
       const payload = {
-        ...form, 
+        ...form,
         status: 'pending', // FORCE PENDING REVIEW
         name: form.organizerName,
         full_name: form.organizerName,
@@ -477,7 +500,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
         total_price: finalTotal,
         venueId: form.venueId,
         venue: form.venueId,
-        eventTitle: form.eventTitle, 
+        eventTitle: form.eventTitle,
         event_title: form.eventTitle,
         eventDescription: form.eventDescription,
         event_description: form.eventDescription,
@@ -519,29 +542,33 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 text-center">
         <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 md:p-12 border border-slate-100 max-w-lg w-full relative overflow-hidden">
-           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#1b5e3a] to-[#268053]" />
-           <CheckCircle2 className="w-24 h-24 text-emerald-500 mx-auto mb-6 animate-in zoom-in duration-500 drop-shadow-sm" />
-           <h2 className="text-4xl font-black text-slate-800 mb-2 uppercase tracking-tight">Request Submitted!</h2>
-           
-           <p className="text-slate-500 font-bold text-sm mb-6 leading-relaxed px-4">
-             Your slot is reserved under <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Admin Review</span>.<br/> You will be notified upon confirmation.
-           </p>
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#1b5e3a] to-[#268053]" />
+          <CheckCircle2 className="w-24 h-24 text-emerald-500 mx-auto mb-6 animate-in zoom-in duration-500 drop-shadow-sm" />
+          <h2 className="text-4xl font-black text-slate-800 mb-2 uppercase tracking-tight">Request Submitted!</h2>
 
-           <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-5 mb-10 shadow-inner">
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Your Tracking Reference</p>
-             <p className="text-3xl font-black text-[#268053] tracking-wider select-all cursor-text mb-1">
-               MOA-BKG-{submittedBookingId}
-             </p>
-             {isGuest && (
-               <p className="text-[11px] font-bold text-amber-600 mt-3 animate-pulse bg-amber-50 py-1.5 rounded-lg">
-                 ⚠️ Please copy and save this ID to track your request.
-               </p>
-             )}
-           </div>
+          <p className="text-slate-600 font-bold text-sm mb-6 leading-relaxed px-4">
+            Your time slot is now reserved under <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-black border border-amber-200">Tentative / Pending Approval</span>.<br />
+            To prevent double booking, this time slot is blocked from being booked by others.<br />
+            <span className="text-xs text-slate-400 mt-2 block font-normal">
+              Please note: Submitting holds your slot, but official approval by MoA Management is required before confirmation.
+            </span>
+          </p>
 
-           <Button onClick={onComplete} className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all hover:-translate-y-1 hover:scale-[1.02]">
-             {isGuest ? 'Track Your Status' : 'Return to Dashboard'}
-           </Button>
+          <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-5 mb-10 shadow-inner">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Your Tracking Reference</p>
+            <p className="text-3xl font-black text-[#268053] tracking-wider select-all cursor-text mb-1">
+              MOA-BKG-{submittedBookingId}
+            </p>
+            {isGuest && (
+              <p className="text-[11px] font-bold text-amber-600 mt-3 animate-pulse bg-amber-50 py-1.5 rounded-lg">
+                ⚠️ Please copy and save this ID to track your request.
+              </p>
+            )}
+          </div>
+
+          <Button onClick={onComplete} className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all hover:-translate-y-1 hover:scale-[1.02]">
+            {isGuest ? 'Track Your Status' : 'Return to Dashboard'}
+          </Button>
         </div>
       </div>
     );
@@ -558,7 +585,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
       )}
       <div className="max-w-4xl mx-auto px-4 -mt-16 mb-20 relative z-10">
         <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 border border-slate-100/50 backdrop-blur-xl">
-          
+
           <div className="relative flex justify-center items-center gap-4 sm:gap-12 mb-12">
             <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -z-10 rounded-full" />
             {steps.map((s) => (
@@ -580,6 +607,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 <div>
                   <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Organization/Department *</label>
                   <input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} placeholder="Organization Name" />
+                  {errors.organizerOrganization && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerOrganization}</p>}
                 </div>
               </div>
               <div className="grid gap-6 sm:grid-cols-2">
@@ -594,11 +622,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                     <div className="flex items-center justify-center px-4 bg-slate-100 border-2 border-r-0 border-slate-100 rounded-l-xl text-slate-700 font-bold text-xs shrink-0">
                       ET +251
                     </div>
-                    <input 
-                      value={form.organizerPhone.startsWith('+251') ? form.organizerPhone.substring(4).trim() : form.organizerPhone} 
-                      onChange={e => setForm(p => ({ ...p, organizerPhone: '+251 ' + e.target.value.replace(/^\+251\s*/, '') }))} 
-                      className={inputClass('organizerPhone').replace('rounded-xl', 'rounded-r-xl rounded-l-none')} 
-                      placeholder="911 23 45 67" 
+                    <input
+                      value={form.organizerPhone.startsWith('+251') ? form.organizerPhone.substring(4).trim() : form.organizerPhone}
+                      onChange={e => setForm(p => ({ ...p, organizerPhone: '+251 ' + e.target.value.replace(/^\+251\s*/, '') }))}
+                      className={inputClass('organizerPhone').replace('rounded-xl', 'rounded-r-xl rounded-l-none')}
+                      placeholder="911 23 45 67"
                     />
                   </div>
                   {errors.organizerPhone && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerPhone}</p>}
@@ -623,29 +651,29 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
             <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
               <div className="grid sm:grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                 <div>
-                  <label className="text-xs font-medium text-black uppercase block mb-2 tracking-widest flex items-center gap-2"><Building2 size={14}/> Venue Selection *</label>
-                <select value={form.venueId} onChange={e => setForm(p => ({ ...p, venueId: e.target.value }))} className={inputClass('venueId')}>
-                  <option value="">Select a hall...</option>
-                  {/* --- FIXED: Uses availableVenues to show all, but disables VIP for unprivileged users --- */}
-                  {availableVenues?.map(v => {
-                    const isOutOfOrder = v.status === 'out_of_order';
-                    
-                    return (
-                      <option 
-                        key={v.id} 
-                        value={v.id} 
-                        disabled={isOutOfOrder}
-                        className={isOutOfOrder ? 'text-red-500 font-bold bg-red-50' : ''}
-                      >
-                        {v.name} (Max: {v.capacity}) {isOutOfOrder ? ' ❌ [OUT OF ORDER]' : ''}
-                      </option>
-                    )
-                  })}
-                </select>
+                  <label className="text-xs font-medium text-black uppercase block mb-2 tracking-widest flex items-center gap-2"><Building2 size={14} /> Venue Selection *</label>
+                  <select value={form.venueId} onChange={e => setForm(p => ({ ...p, venueId: e.target.value }))} className={inputClass('venueId')}>
+                    <option value="">Select a hall...</option>
+                    {/* --- FIXED: Uses availableVenues to show all, but disables VIP for unprivileged users --- */}
+                    {availableVenues?.map(v => {
+                      const isOutOfOrder = v.status === 'out_of_order';
+
+                      return (
+                        <option
+                          key={v.id}
+                          value={v.id}
+                          disabled={isOutOfOrder}
+                          className={isOutOfOrder ? 'text-red-500 font-bold bg-red-50' : ''}
+                        >
+                          {v.name} (Max: {v.capacity}) {isOutOfOrder ? ' ❌ [OUT OF ORDER]' : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
                 </div>
                 <div>
                   <label className={`text-xs font-medium uppercase block mb-2 tracking-widest flex items-center gap-2 transition-colors ${errors.participantCount ? 'text-red-600 animate-pulse' : 'text-black'}`}>
-                    <Users size={14}/> Expected Max *
+                    <Users size={14} /> Expected Max *
                     {errors.participantCount && <span className="text-[9px] bg-red-100 px-2 py-0.5 rounded text-red-700 ml-auto font-bold">{errors.participantCount}</span>}
                   </label>
                   <input type="number" min={selectedVenue && selectedVenue.capacity === 0 ? "0" : "1"} value={form.participantCount} onChange={e => setForm(p => ({ ...p, participantCount: e.target.value }))} className={`${inputClass('participantCount')} ${errors.participantCount ? 'border-red-400 bg-red-50 text-red-900 ring-4 ring-red-500/20' : ''}`} placeholder={selectedVenue && selectedVenue.capacity === 0 ? "0" : "Number of attendees"} />
@@ -656,22 +684,22 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
               <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row gap-8 shadow-sm">
                 <div className="bg-slate-50/80 p-4 rounded-2xl flex justify-center border border-slate-100">
-                  <EthiopianCalendar 
-                    selected={{ from: form.startDate ? parseISO(form.startDate) : undefined, to: form.endDate ? parseISO(form.endDate) : undefined }} 
+                  <EthiopianCalendar
+                    selected={{ from: form.startDate ? parseISO(form.startDate) : undefined, to: form.endDate ? parseISO(form.endDate) : undefined }}
                     onSelect={(r) => {
                       if (r?.from) {
                         const now = new Date();
                         const minAllowedTime = new Date(now.getTime() + waitingPeriodHours * 60 * 60 * 1000);
                         const minAllowedDay = startOfDay(minAllowedTime);
                         const selectedDate = startOfDay(r.from);
-                        
+
                         if (!isPrivilegedUser && selectedDate < minAllowedDay) {
                           toast.error(`Business Rule Restriction: Bookings must be made at least ${waitingPeriodHours} hour(s) in advance. Earliest allowed date is ${format(minAllowedTime, 'MMM d, yyyy')}.`);
-                          return; 
+                          return;
                         }
                       }
                       setForm(p => ({ ...p, startDate: r?.from ? format(r.from, 'yyyy-MM-dd') : '', endDate: r?.to ? format(r.to, 'yyyy-MM-dd') : '' }))
-                    }} 
+                    }}
                     bookedDates={hardBookedDates}
                     partialBookedDates={partialBookedDates}
                     pendingDates={softBookedDates}
@@ -679,13 +707,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                 </div>
                 <div className="flex-1 space-y-4 flex flex-col justify-center">
                   <div className={`p-4 border-2 rounded-xl bg-white text-sm font-black uppercase tracking-widest flex justify-between items-center shadow-sm ${errors.startDate ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}>
-                    <span className="text-slate-300">START</span> 
+                    <span className="text-slate-300">START</span>
                     <span className="text-[#268053]">
                       {form.startDate ? getGregDateString(form.startDate) : '---'}
                     </span>
                   </div>
                   <div className={`p-4 border-2 rounded-xl bg-white text-sm font-black uppercase tracking-widest flex justify-between items-center shadow-sm ${errors.startDate ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}>
-                    <span className="text-slate-300">END</span> 
+                    <span className="text-slate-300">END</span>
                     <span className="text-[#268053]">
                       {form.endDate ? getGregDateString(form.endDate) : '---'}
                     </span>
@@ -695,7 +723,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   )}
                   {errors.rangeConflict && (
                     <div className="bg-red-50 border-2 border-red-200 p-3 rounded-xl text-center shadow-inner animate-in pop-in">
-                       <p className="text-xs text-red-700 font-black uppercase tracking-widest flex items-center justify-center gap-2"><ShieldAlert size={14}/> Please resolve time conflicts below</p>
+                      <p className="text-xs text-red-700 font-black uppercase tracking-widest flex items-center justify-center gap-2"><ShieldAlert size={14} /> Please resolve time conflicts below</p>
                     </div>
                   )}
                 </div>
@@ -709,10 +737,10 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                     const dayExisting = existingSchedules.filter(ex => ex.date === s.date);
                     const dayAvailable = getAvailableSlots(s.date);
                     return (
-                      <div key={s.date} className={`flex flex-col border-2 p-3 sm:p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
+                      <div key={s.date} className={`flex flex-col border-2 p-3 sm:p-4 rounded-xl transition-all shadow-sm ${conflict ? (conflict.type === 'hard_overlap' ? 'bg-red-50 border-red-200' : conflict.type === 'soft_overlap' ? 'bg-amber-50 border-amber-300' : 'bg-amber-50 border-amber-200') : 'bg-white border-slate-100 hover:border-emerald-200'}`}>
                         {/* Date label */}
                         <span className="text-[11px] font-black uppercase text-slate-600 tracking-widest flex items-center gap-2 mb-3">
-                          <Clock size={13} className="text-emerald-500 shrink-0"/> {getGregDateString(s.date)}
+                          <Clock size={13} className="text-emerald-500 shrink-0" /> {getGregDateString(s.date)}
                         </span>
 
                         {/* Controls row — wraps on small screens */}
@@ -738,11 +766,13 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                           {dayExisting.length > 0 ? (
                             <div className="flex flex-col gap-1.5">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-[9px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Booked Slots:</span>
+                                <span className="text-[9px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded uppercase tracking-wider shrink-0">Reserved Slots:</span>
                                 <div className="flex flex-wrap gap-1.5">
                                   {dayExisting.map((ex, bIdx) => (
-                                    <span key={bIdx} className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                                      {toEthTime(ex.start)} - {toEthTime(ex.end)}
+                                    <span key={bIdx} className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${ex.isHard ? 'text-red-700 bg-red-50 border-red-200' : 'text-amber-800 bg-amber-50 border-amber-200'
+                                      }`}>
+                                      <span className={`w-1.5 h-1.5 rounded-full ${ex.isHard ? 'bg-red-500' : 'bg-amber-500'}`} />
+                                      {toEthTime(ex.start)} - {toEthTime(ex.end)} {ex.isHard ? '(Confirmed)' : '(Tentative / Pending)'}
                                     </span>
                                   ))}
                                 </div>
@@ -775,9 +805,26 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                         </div>
 
                         {conflict && (
-                          <div className="mt-3 pt-3 border-t border-slate-200/50 flex items-start gap-2 animate-in fade-in">
-                            {conflict.type === 'hard_overlap' ? <ShieldAlert size={13} className="text-red-500 shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />}
-                            <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${conflict.type === 'hard_overlap' ? 'text-red-600' : 'text-amber-600'}`}>{conflict.msg}</p>
+                          <div className={`mt-3 pt-3 border-t flex items-start gap-2 animate-in fade-in ${conflict.type === 'hard_overlap' ? 'border-red-200/70' : 'border-amber-200/70'
+                            }`}>
+                            {conflict.type === 'hard_overlap' ? (
+                              <ShieldAlert size={14} className="text-red-500 shrink-0 mt-0.5" />
+                            ) : conflict.type === 'soft_overlap' ? (
+                              <Clock size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                            ) : (
+                              <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                            )}
+                            <div>
+                              <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${conflict.type === 'hard_overlap' ? 'text-red-600' : conflict.type === 'soft_overlap' ? 'text-amber-700' : 'text-amber-600'
+                                }`}>
+                                {conflict.msg}
+                              </p>
+                              {conflict.type === 'soft_overlap' && (
+                                <p className="text-[9px] font-bold text-slate-500 mt-0.5">
+                                  This slot is held under tentative review. To avoid double-booking, another time slot or venue must be selected.
+                                </p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -799,11 +846,11 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   const list = i === 0 ? supportedTechnicalServices : [];
                   const formList = i === 0 ? form.technicalServices : form.supportServices;
                   const type = i === 0 ? 'technicalServices' : 'supportServices';
-                  
+
                   return (
                     <div key={l} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                       <p className="text-xs font-medium text-black uppercase mb-4 tracking-widest flex items-center gap-2">
-                        {i === 0 ? <MonitorSmartphone className="text-blue-500"/> : <Coffee className="text-amber-500"/>} 
+                        {i === 0 ? <MonitorSmartphone className="text-blue-500" /> : <Coffee className="text-amber-500" />}
                         {l} Support
                       </p>
                       {i === 0 && (
@@ -812,18 +859,17 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                             list.map(s => {
                               const isIncluded = isServiceIncluded(type, s.id?.toString());
                               const isSelected = formList.includes(s.id?.toString());
-                              
+
                               return (
-                                <div 
-                                  key={s.id} 
-                                  onClick={() => !isIncluded && toggleService(type, s.id?.toString())} 
-                                  className={`p-4 border-2 rounded-xl flex justify-between items-center transition-all duration-300 ${
-                                    isIncluded
+                                <div
+                                  key={s.id}
+                                  onClick={() => !isIncluded && toggleService(type, s.id?.toString())}
+                                  className={`p-4 border-2 rounded-xl flex justify-between items-center transition-all duration-300 ${isIncluded
                                       ? 'border-emerald-200 bg-emerald-50/40 opacity-90 cursor-not-allowed'
-                                      : isSelected 
-                                        ? 'border-[#268053] bg-emerald-50/50 shadow-md shadow-emerald-500/10 scale-[1.02] cursor-pointer' 
+                                      : isSelected
+                                        ? 'border-[#268053] bg-emerald-50/50 shadow-md shadow-emerald-500/10 scale-[1.02] cursor-pointer'
                                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 cursor-pointer'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isIncluded || isSelected ? 'bg-[#268053] border-[#268053]' : 'border-slate-300'}`}>
@@ -833,7 +879,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                                       {s.name}
                                     </span>
                                   </div>
-                                  
+
                                   {isIncluded ? (
                                     <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-widest">
                                       <Lock size={10} /> Included
@@ -865,7 +911,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               </p>
                             </div>
                           </div>
-                          
+
                           {/* Catering Services Guidelines Notice */}
                           <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-3.5 space-y-1.5 text-slate-800 mb-4 shadow-sm">
                             <div className="flex items-center gap-2 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
@@ -876,7 +922,7 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                               Please be advised that catering services are neither provided nor coordinated by the Center. Should catering be required for your event, you may directly contact the catering providers available within the MoA premises, including Mama's Kitchen, Mao Coffee, and MoA Cooperative Caffee and Restaurant, to discuss menu options, pricing, and service arrangements. Clients maintain full responsibility for coordinating all catering arrangements directly with their preferred provider.
                             </p>
                           </div>
-                          
+
                           <div className="grid gap-2">
                             <div className="bg-white border-2 border-slate-100/50 rounded-xl p-3 flex items-center gap-3 group hover:border-emerald-200 transition-all shadow-sm">
                               <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
@@ -993,15 +1039,15 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
           {currentStep === 4 && (
             <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-500">
               <div className="grid lg:grid-cols-3 gap-8">
-                
+
                 <div className="lg:col-span-2 bg-white p-8 rounded-3xl border-2 border-dashed border-slate-200 shadow-sm relative">
                   <div className="absolute -top-3 -left-3 w-6 h-6 bg-[#f8fafc] rounded-full border-r-2 border-b-2 border-slate-200" />
                   <div className="absolute -top-3 -right-3 w-6 h-6 bg-[#f8fafc] rounded-full border-l-2 border-b-2 border-slate-200" />
                   <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-[#f8fafc] rounded-full border-r-2 border-t-2 border-slate-200" />
                   <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-[#f8fafc] rounded-full border-l-2 border-t-2 border-slate-200" />
-                  
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b-2 border-dashed border-slate-100 pb-4 mb-6 flex items-center gap-2"><Receipt size={14}/> OFFICIAL RECAP</p>
-                  
+
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b-2 border-dashed border-slate-100 pb-4 mb-6 flex items-center gap-2"><Receipt size={14} /> OFFICIAL RECAP</p>
+
                   <div className="space-y-4 mb-8">
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Venue:</span><span className="text-slate-800 bg-slate-100 px-3 py-1 rounded-md">{selectedVenue?.name}</span></div>
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest"><span className="text-slate-400">Dates:</span><span className="text-slate-800">{getGregDateString(form.startDate)} - {getGregDateString(form.endDate)}</span></div>
@@ -1009,38 +1055,42 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   </div>
 
                   <div className="pt-6 border-t-2 border-dashed border-slate-100">
-                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Requested Enhancements</p>
-                     
-                     <div className="flex flex-wrap gap-2">
-                        {form.technicalServices.length === 0 && form.supportServices.length === 0 ? <span className="text-xs italic text-slate-400">No extra services selected.</span> : null}
-                        
-                        {form.technicalServices.map(id => {
-                          const s = technicalServices.find(x => x.id?.toString() === id?.toString());
-                          return <span key={`tech-${id}`} className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-[10px] font-black uppercase tracking-tight rounded-lg text-blue-700 shadow-sm">{s?.name}</span>
-                        })}
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Requested Enhancements</p>
 
-                        {form.supportServices.map(id => {
-                          const s = supportServices.find(x => x.id?.toString() === id?.toString());
-                          return <span key={`supp-${id}`} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-[10px] font-black uppercase tracking-tight rounded-lg text-amber-700 shadow-sm">{s?.name}</span>
-                        })}
-                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      {form.technicalServices.length === 0 && form.supportServices.length === 0 ? <span className="text-xs italic text-slate-400">No extra services selected.</span> : null}
+
+                      {form.technicalServices.map(id => {
+                        const s = technicalServices.find(x => x.id?.toString() === id?.toString());
+                        return <span key={`tech-${id}`} className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-[10px] font-black uppercase tracking-tight rounded-lg text-blue-700 shadow-sm">{s?.name}</span>
+                      })}
+
+                      {form.supportServices.map(id => {
+                        const s = supportServices.find(x => x.id?.toString() === id?.toString());
+                        return <span key={`supp-${id}`} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-[10px] font-black uppercase tracking-tight rounded-lg text-amber-700 shadow-sm">{s?.name}</span>
+                      })}
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-gradient-to-b from-[#0f241a] to-[#153a29] rounded-3xl p-8 text-white flex flex-col justify-center shadow-2xl relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
-                   <p className="text-[10px] font-black text-emerald-400 uppercase mb-8 tracking-widest flex items-center gap-2"><Sparkles size={14}/> REQUEST SUMMARY</p>
-                   <div className="space-y-4 mb-8 opacity-80 text-xs font-bold uppercase tracking-widest">
-                     <div className="flex justify-between border-b border-white/10 pb-4"><span>Duration</span><span>{form.dailySchedules?.length || 1} Day(s)</span></div>
-                     <div className="flex justify-between border-b border-white/10 pb-4"><span>Extra Services</span><span>{form.technicalServices.length + form.supportServices.length}</span></div>
-                   </div>
-                   <div className="mt-auto pt-4 flex flex-col items-start gap-2">
-                     <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">PENDING ADMIN APPROVAL</span>
-                     <span className="text-sm font-bold text-white/70 leading-relaxed">Pricing will be confirmed by the finance office upon approval.</span>
-                   </div>
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
+                  <p className="text-[10px] font-black text-emerald-400 uppercase mb-8 tracking-widest flex items-center gap-2"><Sparkles size={14} /> REQUEST SUMMARY</p>
+                  <div className="space-y-4 mb-8 opacity-80 text-xs font-bold uppercase tracking-widest">
+                    <div className="flex justify-between border-b border-white/10 pb-4"><span>Duration</span><span>{form.dailySchedules?.length || 1} Day(s)</span></div>
+                    <div className="flex justify-between border-b border-white/10 pb-4"><span>Extra Services</span><span>{form.technicalServices.length + form.supportServices.length}</span></div>
+                  </div>
+                  <div className="mt-auto pt-4 flex flex-col items-start gap-2 border-t border-white/10">
+                    <span className="text-[10px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                      <Clock size={12} className="text-amber-400" /> TENTATIVE HOLD UPON SUBMISSION
+                    </span>
+                    <span className="text-xs font-medium text-white/80 leading-relaxed">
+                      Submitting reserves this time slot to prevent double-booking. Final confirmation requires approval by MoA Management.
+                    </span>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="mt-12 flex flex-col gap-4 pt-6 border-t border-slate-100">
                 {submitError && (
                   <div className="flex items-start gap-3 bg-red-50 border-2 border-red-300 rounded-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1072,8 +1122,8 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
 
                 <div className="flex justify-between w-full">
                   <button onClick={() => setCurrentStep(3)} className="font-black text-slate-400 hover:text-slate-600 uppercase text-xs tracking-widest transition-colors">Back</button>
-                  <Button 
-                    onClick={handleSubmit} 
+                  <Button
+                    onClick={handleSubmit}
                     disabled={isSubmitting}
                     className="px-16 h-16 bg-gradient-to-r from-[#1b5e3a] to-[#268053] hover:from-[#15472c] hover:to-[#1b5e3a] text-white text-lg rounded-2xl font-black shadow-2xl shadow-emerald-900/30 uppercase tracking-widest transition-all hover:-translate-y-1 hover:scale-105 active:scale-95 disabled:opacity-75 disabled:pointer-events-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:from-[#268053] disabled:to-[#268053]"
                   >

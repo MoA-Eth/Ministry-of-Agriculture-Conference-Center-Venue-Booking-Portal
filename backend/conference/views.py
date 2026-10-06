@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, date
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -20,7 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 
-from .utils import send_automated_email, log_action
+from .utils import send_automated_email, log_action, send_event_management_approval_email
 from .models import Venue, TechnicalService, SupportService, Booking, SystemUser, EmailTemplate, AuditLog, SystemSettings, Notification
 from .serializers import (
     RegisterSerializer,
@@ -303,6 +303,21 @@ class BookingViewSet(viewsets.ModelViewSet):
     ordering_fields    = ['created_at', 'start_date', 'status']
     ordering           = ['-created_at']
 
+    def paginate_queryset(self, queryset):
+        is_public = self.request.query_params.get('public', 'false').lower() == 'true'
+        all_param = self.request.query_params.get('all', 'false').lower() == 'true'
+        # Do not paginate public schedule/calendar requests so all active bookings appear
+        if is_public or all_param:
+            return None
+        return super().paginate_queryset(queryset)
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        # Prevent browser HTTP caching on booking API responses
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return super().finalize_response(request, response, *args, **kwargs)
+
     def perform_update(self, serializer):
         instance = self.get_object()
         old_status = instance.status
@@ -337,7 +352,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         is_public = self.request.query_params.get('public', 'false').lower() == 'true'
         if is_public:
-            return qs.filter(status__in=['pending', 'partial_paid', 'paid', 'approved'])
+            return qs.filter(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'])
 
         user = self.request.user
         if user.is_authenticated:
@@ -345,8 +360,10 @@ class BookingViewSet(viewsets.ModelViewSet):
             if role in ('system_admin', 'leadership'):
                 pass
             elif role in ('event_management', 'admin_finance'):
-                # Event management and Finance only see bookings that have passed MoA management approval
-                qs = qs.exclude(status='pending')
+                # Allow event management & finance to see pending bookings for schedule/calendar awareness,
+                # unless explicitly excluded via ?exclude_pending=true
+                if self.request.query_params.get('exclude_pending', 'false').lower() == 'true':
+                    qs = qs.exclude(status='pending')
             elif role == 'organizer':
                 scheduled_q = Q(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'])
                 qs = qs.filter(Q(user=user) | scheduled_q).distinct()
@@ -412,47 +429,93 @@ class BookingViewSet(viewsets.ModelViewSet):
                     f"Earliest allowed start date/time is {min_allowed.strftime('%Y-%m-%d %H:%M UTC')}."
                 )
 
-        # ── Rule 2: Buffer Time ─────────────────────────────────────────────
+        # ── Rule 2: Double-Booking & Buffer Time Prevention ─────────────────
+        # Once a booking is submitted and marked as tentative/pending, it blocks
+        # the same time slot from being booked by another user.
         venue = serializer.validated_data.get('venue')
         req_start_date = serializer.validated_data.get('start_date')
         req_end_date   = serializer.validated_data.get('end_date')
         req_start_time = serializer.validated_data.get('start_time')
         req_end_time   = serializer.validated_data.get('end_time')
+        req_daily_schedules = serializer.validated_data.get('daily_schedules') or self.request.data.get('daily_schedules') or []
 
-        if venue and req_start_date and req_end_date and rules.buffer_time_minutes > 0 and not is_vip_booking:
-            buf = timedelta(minutes=rules.buffer_time_minutes)
-            # Expand the requested window by the buffer on both sides
-            buf_start_date = req_start_date
-            buf_end_date   = req_end_date
-
-            neighbors = Booking.objects.filter(
-                venue=venue,
-                # Buffer only enforced for confirmed/paid bookings — not pending requests
-                status__in=['partial_paid', 'paid', 'approved', 'completed'],
-                start_date__lte=buf_end_date,
-                end_date__gte=buf_start_date,
+        if venue and req_start_date and req_end_date:
+            req_intervals = self._extract_daily_intervals(
+                req_start_date, req_end_date, req_start_time, req_end_time, req_daily_schedules
             )
 
-            for neighbor in neighbors:
-                if req_start_time and req_end_time and neighbor.start_time and neighbor.end_time:
-                    # Time-precise check: expand by buffer
-                    req_start_dt  = datetime.combine(req_start_date, req_start_time)
-                    req_end_dt    = datetime.combine(req_end_date,   req_end_time)
-                    n_start_dt    = datetime.combine(neighbor.start_date, neighbor.start_time)
-                    n_end_dt      = datetime.combine(neighbor.end_date,   neighbor.end_time)
-                    if (req_start_dt - buf) < n_end_dt and req_end_dt > (n_start_dt - buf):
-                        raise ValidationError(
-                            f"This venue requires a {rules.buffer_time_minutes}-minute buffer between events. "
-                            f"Another booking exists from {neighbor.start_date} {neighbor.start_time} "
-                            f"to {neighbor.end_date} {neighbor.end_time}."
-                        )
-                else:
-                    # Date-only check
-                    if req_start_date <= neighbor.end_date and req_end_date >= neighbor.start_date:
-                        raise ValidationError(
-                            f"This venue requires at least a {rules.buffer_time_minutes}-minute buffer between events. "
-                            f"Another booking already occupies an overlapping date range."
-                        )
+            if is_vip_booking:
+                # VIP override bookings cannot override existing approved VIP reservations
+                vip_conflicts = Booking.objects.filter(
+                    venue=venue,
+                    status='approved',
+                    start_date__lte=req_end_date,
+                    end_date__gte=req_start_date,
+                )
+                for vip_neighbor in vip_conflicts:
+                    vip_intervals = self._extract_daily_intervals(
+                        vip_neighbor.start_date, vip_neighbor.end_date,
+                        vip_neighbor.start_time, vip_neighbor.end_time,
+                        vip_neighbor.daily_schedules
+                    )
+                    common_dates = set(req_intervals.keys()) & set(vip_intervals.keys())
+                    for d in common_dates:
+                        for req_st, req_et in req_intervals[d]:
+                            for v_st, v_et in vip_intervals[d]:
+                                req_st_dt = datetime.combine(d, req_st)
+                                req_et_dt = datetime.combine(d, req_et)
+                                v_st_dt = datetime.combine(d, v_st)
+                                v_et_dt = datetime.combine(d, v_et)
+                                if req_st_dt < v_et_dt and req_et_dt > v_st_dt:
+                                    raise ValidationError(
+                                        f"This time slot on {d.strftime('%Y-%m-%d')} is already secured by an approved VIP Override ('{vip_neighbor.event_title}')."
+                                    )
+            else:
+                # Standard bookings: ALL active bookings (including tentative/pending) block the slot
+                active_statuses = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed']
+                buf = timedelta(minutes=rules.buffer_time_minutes) if rules.buffer_time_minutes > 0 else timedelta(0)
+
+                neighbors = Booking.objects.filter(
+                    venue=venue,
+                    status__in=active_statuses,
+                    start_date__lte=req_end_date,
+                    end_date__gte=req_start_date,
+                )
+
+                for neighbor in neighbors:
+                    nbr_intervals = self._extract_daily_intervals(
+                        neighbor.start_date, neighbor.end_date,
+                        neighbor.start_time, neighbor.end_time,
+                        neighbor.daily_schedules
+                    )
+                    common_dates = set(req_intervals.keys()) & set(nbr_intervals.keys())
+                    for d in common_dates:
+                        for req_st, req_et in req_intervals[d]:
+                            for nbr_st, nbr_et in nbr_intervals[d]:
+                                req_st_dt = datetime.combine(d, req_st)
+                                req_et_dt = datetime.combine(d, req_et)
+                                nbr_st_dt = datetime.combine(d, nbr_st)
+                                nbr_et_dt = datetime.combine(d, nbr_et)
+
+                                # Direct slot overlap check
+                                if req_st_dt < nbr_et_dt and req_et_dt > nbr_st_dt:
+                                    status_disp = neighbor.get_status_display()
+                                    raise ValidationError(
+                                        f"Time slot conflict on {d.strftime('%Y-%m-%d')}: the requested hours "
+                                        f"({req_st.strftime('%H:%M')} - {req_et.strftime('%H:%M')}) overlap with an existing booking "
+                                        f"for '{neighbor.event_title}' ({status_disp}: {nbr_st.strftime('%H:%M')} - {nbr_et.strftime('%H:%M')}). "
+                                        f"Tentative and pending bookings hold their slots to prevent double-booking."
+                                    )
+
+                                # Buffer time check
+                                if rules.buffer_time_minutes > 0:
+                                    if (req_st_dt - buf) < nbr_et_dt and (req_et_dt + buf) > nbr_st_dt:
+                                        status_disp = neighbor.get_status_display()
+                                        raise ValidationError(
+                                            f"Buffer time conflict on {d.strftime('%Y-%m-%d')}: this venue requires a "
+                                            f"{rules.buffer_time_minutes}-minute turnaround buffer between events. "
+                                            f"Existing reservation '{neighbor.event_title}' ({status_disp}) occupies {nbr_st.strftime('%H:%M')} - {nbr_et.strftime('%H:%M')}."
+                                        )
 
         if user and user.is_authenticated:
             role = get_role(user)
@@ -473,11 +536,114 @@ class BookingViewSet(viewsets.ModelViewSet):
             link='#/manage-bookings'
         )
 
+    @staticmethod
+    def _extract_daily_intervals(start_date, end_date, start_time, end_time, daily_schedules):
+        intervals_by_date = {}
+        if isinstance(daily_schedules, list) and len(daily_schedules) > 0:
+            for ds in daily_schedules:
+                if not isinstance(ds, dict):
+                    continue
+                d_val = ds.get('date')
+                if not d_val:
+                    continue
+                if isinstance(d_val, str):
+                    try:
+                        d_obj = datetime.strptime(d_val, '%Y-%m-%d').date()
+                    except ValueError:
+                        continue
+                elif isinstance(d_val, datetime):
+                    d_obj = d_val.date()
+                elif isinstance(d_val, date):
+                    d_obj = d_val
+                else:
+                    continue
+
+                is_all_day = bool(ds.get('allDay') or ds.get('all_day'))
+                if is_all_day:
+                    st = time(8, 30)
+                    et = time(17, 30)
+                else:
+                    st_str = ds.get('startTime') or ds.get('start_time')
+                    et_str = ds.get('endTime') or ds.get('end_time')
+                    st = None
+                    et = None
+                    if st_str:
+                        try:
+                            h, m = map(int, str(st_str).split(':')[:2])
+                            st = time(h, m)
+                        except ValueError:
+                            pass
+                    if et_str:
+                        try:
+                            h, m = map(int, str(et_str).split(':')[:2])
+                            et = time(h, m)
+                        except ValueError:
+                            pass
+
+                    # Fallbacks
+                    if not st:
+                        if isinstance(start_time, time):
+                            st = start_time
+                        elif isinstance(start_time, str):
+                            try:
+                                h, m = map(int, start_time.split(':')[:2])
+                                st = time(h, m)
+                            except ValueError:
+                                st = time(8, 30)
+                        else:
+                            st = time(8, 30)
+
+                    if not et:
+                        if isinstance(end_time, time):
+                            et = end_time
+                        elif isinstance(end_time, str):
+                            try:
+                                h, m = map(int, end_time.split(':')[:2])
+                                et = time(h, m)
+                            except ValueError:
+                                et = time(17, 30)
+                        else:
+                            et = time(17, 30)
+
+                intervals_by_date.setdefault(d_obj, []).append((st, et))
+
+        if not intervals_by_date and start_date and end_date:
+            s_date = start_date if isinstance(start_date, date) else datetime.strptime(str(start_date), '%Y-%m-%d').date()
+            e_date = end_date if isinstance(end_date, date) else datetime.strptime(str(end_date), '%Y-%m-%d').date()
+            if isinstance(start_time, time):
+                st = start_time
+            elif isinstance(start_time, str):
+                try:
+                    h, m = map(int, start_time.split(':')[:2])
+                    st = time(h, m)
+                except ValueError:
+                    st = time(8, 30)
+            else:
+                st = time(8, 30)
+
+            if isinstance(end_time, time):
+                et = end_time
+            elif isinstance(end_time, str):
+                try:
+                    h, m = map(int, end_time.split(':')[:2])
+                    et = time(h, m)
+                except ValueError:
+                    et = time(17, 30)
+            else:
+                et = time(17, 30)
+
+            curr = s_date
+            while curr <= e_date:
+                intervals_by_date.setdefault(curr, []).append((st, et))
+                curr += timedelta(days=1)
+
+        return intervals_by_date
+
     def _handle_vip_clashes(self, booking):
         # Override handles clashes by rejecting existing active bookings
         clashes = Booking.objects.filter(
             venue=booking.venue,
-            status__in=['pending', 'partial_paid', 'paid', 'approved'],
+            status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'],
             start_date__lte=booking.end_date,
             end_date__gte=booking.start_date,
         ).exclude(pk=booking.pk)
@@ -621,6 +787,10 @@ class BookingViewSet(viewsets.ModelViewSet):
         )
 
         self._trigger_email(booking, 'management_approved')
+
+        # Notify Event Management team by email
+        send_event_management_approval_email(booking, approved_by=request.user)
+
         return Response(BookingSerializer(booking, context={'request': request}).data)
 
     @action(detail=True, methods=['patch'], url_path='reject_management', permission_classes=[IsLeadership])

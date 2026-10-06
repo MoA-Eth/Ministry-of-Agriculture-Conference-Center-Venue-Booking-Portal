@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useApp } from '@/lib/app-context';
 import AppShell from '@/components/AppShell';
 import CalendarView from '@/components/CalendarView';
@@ -22,26 +22,41 @@ import ProfileSettings from '@/components/ProfileSettings';
 
 function AppContent() {
   const { role, token } = useApp();
+  const location = useLocation();
   
-  const defaultPage = 
-    !token ? 'vip-booking' : 
-    role === 'ict_admin' ? 'technical-tasks' :
-    role === 'catering_support' ? 'catering-tasks' :
-    ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role) ? 'dashboard' : 
-    'calendar';
+  const getInitialPage = () => {
+    const hashWithQuery = window.location.hash.replace('#/', '').replace('#', '');
+    const [hash] = hashWithQuery.split('?');
+    const validPages = [
+      'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
+      'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
+      'venue-operations', 'message-center', 'technical-tasks', 'catering-tasks',
+      'audit-log', 'business-rules', 'billing-admin', 'profile-settings'
+    ];
+    if (hash && validPages.includes(hash)) {
+      if (!token && !['calendar', 'venues', 'new-booking'].includes(hash)) {
+        return 'calendar';
+      }
+      return hash;
+    }
+    return !token ? 'calendar' : 
+      role === 'ict_admin' ? 'technical-tasks' :
+      role === 'catering_support' ? 'catering-tasks' :
+      ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role) ? 'dashboard' : 
+      'calendar';
+  };
     
-  const [page, setPage] = useState(defaultPage);
+  const [page, setPage] = useState(getInitialPage);
 
-  if (!token && !['calendar', 'venues', 'new-booking', 'vip-booking'].includes(page)) {
+  if (!token && !['calendar', 'venues', 'new-booking'].includes(page)) {
     return <Navigate to="/login" replace />;
   }
 
   useEffect(() => {
     const handleHash = () => {
-      const hashWithQuery = window.location.hash.replace('#/', '').replace('#', '');
+      const hashWithQuery = (location.hash || window.location.hash).replace('#/', '').replace('#', '');
       const [hash] = hashWithQuery.split('?');
       
-      // Added 'venue-operations' to the list of valid pages!
       const validPages = [
         'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
         'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
@@ -49,15 +64,21 @@ function AppContent() {
         'audit-log', 'business-rules', 'billing-admin', 'profile-settings'
       ];
       
-      if (validPages.includes(hash)) {
-        setPage(hash);
+      if (hash && validPages.includes(hash)) {
+        if (!token && !['calendar', 'venues', 'new-booking'].includes(hash)) {
+          setPage('calendar');
+        } else {
+          setPage(hash);
+        }
+      } else if (!token) {
+        setPage('calendar');
       }
     };
 
     handleHash(); 
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+  }, [location.hash, token]);
 
   const renderPage = () => {
     // Role-based access control
@@ -101,7 +122,7 @@ function AppContent() {
       case 'profile-settings':
         return <ProfileSettings />;
       default: 
-        return !token ? <VIPBookingForm onComplete={() => setPage('my-bookings')} /> : <Dashboard />;
+        return !token ? <CalendarView /> : (isAdmin ? <Dashboard /> : <CalendarView />);
     }
   };
 
