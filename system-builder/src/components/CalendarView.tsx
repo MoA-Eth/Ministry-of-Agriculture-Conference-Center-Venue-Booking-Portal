@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Booking } from '@/lib/types';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw } from 'lucide-react';
 
@@ -11,7 +11,7 @@ const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
-    const gDate = new Date(y, m - 1, d, 12, 0, 0); 
+    const gDate = new Date(y, m - 1, d, 12, 0, 0);
     return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
@@ -58,148 +58,219 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
+// Helper to resolve per-day timeslot from a booking + a specific dateStr
+function resolveTimeslot(b: Booking, dateStr: string) {
+  let schedules: any[] = Array.isArray(b.dailySchedules) ? b.dailySchedules : [];
+  if (typeof b.dailySchedules === 'string') {
+    try { schedules = JSON.parse(b.dailySchedules as any); } catch { schedules = []; }
+  }
+  const ds = schedules.find((s: any) => (s?.date || '').startsWith(dateStr));
+  const startTime = ds ? (ds.allDay ? '08:30' : (ds.startTime || b.startTime || '')) : (b.startTime || '');
+  const endTime   = ds ? (ds.allDay ? '17:30' : (ds.endTime   || b.endTime   || '')) : (b.endTime   || '');
+  const isAllDay  = Boolean(ds?.allDay);
+  return { startTime, endTime, isAllDay };
+}
+
 // --- Modal Component ---
 
-function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, onClose: () => void, toEthTime: (t: string) => string }) {
-  const { venues, technicalServices, supportServices } = useApp();
+function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, onClose: () => void, toEthTime: (t: any) => string }) {
+  const { venues, technicalServices, supportServices, user, role, token } = useApp();
   const venue = venues.find(v => v.id?.toString() === booking.venueId?.toString());
+  const isStaff = Boolean(token) && ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
+  const isMyBooking = Boolean(token) && Boolean(user) && (
+    booking.userId?.toString() === user?.id?.toString() ||
+    booking.organizerEmail?.toLowerCase() === user?.email?.toLowerCase()
+  );
+  const canSeePrivateDetails = isStaff || isMyBooking;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100">
-        
-        {/* Modal Banner Header */}
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100" onClick={e => e.stopPropagation()}>
+
+        {/* Banner Header */}
         <div className="bg-gradient-to-r from-[#111827] via-[#1b5e3a] to-[#268053] p-6 sm:p-8 text-white relative shrink-0">
-           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-           
-           <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
-             <CloseIcon size={20} />
-           </button>
-
-           <div className="relative z-10 pr-12 pt-2 sm:pt-4">
-              <StatusBadge status={booking.status} />
-              <div className="mt-3 sm:mt-4">
-                <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
-                  {booking.eventTitle}
-                </h2>
-              </div>
-           </div>
-        </div>
-
-        {/* Modal Content - Expanded Details */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 font-sans custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            
-            {/* Column 1: Core Info */}
-            <div className="space-y-6">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Event Date & Time</label>
-                  <div className="space-y-3">
-                     <div className="flex items-center gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0"><CalendarIcon size={18} /></div>
-                        <div className="min-w-0">
-                           <p className="text-xs sm:text-sm font-black text-slate-900 leading-none mb-1 truncate">
-                              {booking.startDate === booking.endDate ? getGregDateString(booking.startDate) : `${getGregDateString(booking.startDate).split(',')[0]} — ${getGregDateString(booking.endDate)}`}
-                           </p>
-                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0"><Clock size={18} /></div>
-                        <div className="min-w-0">
-                           <p className="text-xs sm:text-sm font-black text-slate-900 leading-none mb-1 truncate">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}</p>
-                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule</p>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Venue & Capacity</label>
-                  <div className="flex items-start gap-3 sm:gap-4">
-                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><Building size={18} /></div>
-                     <div className="min-w-0">
-                        <p className="text-sm sm:text-base font-black text-slate-900 leading-tight mb-1 sm:mb-2 uppercase tracking-tight truncate">{venue?.name || 'Unknown Venue'}</p>
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-slate-500 font-bold text-[10px] sm:text-xs"><Users size={14} className="text-[#268053]" /><span className="truncate">{booking.participantCount} Expected Guests</span></div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            {/* Column 2: Organizer & Description */}
-            <div className="space-y-6">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Organizer Contact</label>
-                  <div className="space-y-3 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100">
-                     <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><User size={14} /></div>
-                        <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">{booking.organizerName}</span>
-                     </div>
-                     <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><Mail size={14} /></div>
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 truncate">{booking.organizerEmail}</span>
-                     </div>
-                     {booking.organizerPhone && (
-                       <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><Phone size={14} /></div>
-                          <span className="text-[10px] sm:text-xs font-semibold text-slate-500 truncate">{booking.organizerPhone}</span>
-                       </div>
-                     )}
-                  </div>
-               </div>
-
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
-                  <div className="bg-[#f8fafc] p-3 sm:p-4 rounded-xl border border-slate-100 h-24 sm:h-28 overflow-y-auto custom-scrollbar">
-                    <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed italic">
-                      {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
-                    </p>
-                  </div>
-               </div>
-            </div>
-
-            {/* Column 3: Services & Attachments */}
-            <div className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Requested Services</label>
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  {(!booking.technicalServices?.length && !booking.supportServices?.length) ? (
-                    <p className="text-slate-400 italic text-xs sm:text-sm">No extra services requested.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {booking.technicalServices.map(id => {
-                        const s = technicalServices.find(x => x.id === id);
-                        return s ? <span key={id} className="inline-flex px-2 py-1 rounded bg-white border border-slate-200 text-slate-700 text-[9px] sm:text-[10px] font-bold shadow-sm">{s.name}</span> : null;
-                      })}
-                      {booking.supportServices.map(id => {
-                        const s = supportServices.find(x => x.id === id);
-                        return s ? <span key={id} className="inline-flex px-2 py-1 rounded bg-white border border-slate-200 text-slate-700 text-[9px] sm:text-[10px] font-bold shadow-sm">{s.name}</span> : null;
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {booking.letterAttachment && (
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Attachment</label>
-                  <a href={booking.letterAttachment} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center text-[#268053] shrink-0"><FileText size={16} /></div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-[#268053] text-[10px] sm:text-xs truncate">Official Request Letter</p>
-                        <p className="text-[9px] sm:text-[10px] text-emerald-600">View PDF</p>
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              )}
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
+          <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
+            <CloseIcon size={20} />
+          </button>
+          <div className="relative z-10 pr-12 pt-2 sm:pt-4">
+            <StatusBadge status={booking.status} />
+            <div className="mt-3 sm:mt-4">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
+                {booking.eventTitle}
+              </h2>
             </div>
           </div>
         </div>
 
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 font-sans custom-scrollbar">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+
+            {/* Column 1: Date, Time & Venue */}
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Event Date & Time</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0"><CalendarIcon size={18} /></div>
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-black text-slate-900 leading-none mb-1 truncate">
+                        {booking.startDate === booking.endDate
+                          ? getGregDateString(booking.startDate)
+                          : `${getGregDateString(booking.startDate).split(',')[0]} — ${getGregDateString(booking.endDate)}`}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053] shrink-0 mt-0.5"><Clock size={18} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-black text-emerald-800 leading-none mb-1">
+                        {toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule Timeslot</p>
+                      {booking.dailySchedules && booking.dailySchedules.length > 1 && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-200/60 space-y-1">
+                          {booking.dailySchedules.map((ds: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-[10px] text-slate-600 font-medium">
+                              <span>{getGregDateString(ds.date)}:</span>
+                              <span className="font-bold text-[#1b5e3a]">
+                                {ds.allDay ? 'All Day (08:30 AM – 05:30 PM)' : `${toEthTime(ds.startTime || booking.startTime)} - ${toEthTime(ds.endTime || booking.endTime)}`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Venue & Capacity</label>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><Building size={18} /></div>
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-black text-slate-900 leading-tight mb-1 sm:mb-2 uppercase tracking-tight truncate">{venue?.name || 'Unknown Venue'}</p>
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-slate-500 font-bold text-[10px] sm:text-xs">
+                      <Users size={14} className="text-[#268053]" />
+                      <span className="truncate">{venue?.capacity ? `${venue.capacity} Venue Capacity` : `${booking.participantCount} Expected Guests`}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Organizer / Reservation Briefing + Description */}
+            <div className="space-y-6">
+              {canSeePrivateDetails ? (
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Organizer Contact</label>
+                  <div className="space-y-3 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><User size={14} /></div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">{booking.organizerName}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><Mail size={14} /></div>
+                      <span className="text-[10px] sm:text-xs font-semibold text-slate-500 truncate">{booking.organizerEmail}</span>
+                    </div>
+                    {booking.organizerPhone && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><Phone size={14} /></div>
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 truncate">{booking.organizerPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Reservation Briefing</label>
+                  <div className="space-y-3 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-[#268053] flex items-center justify-center shrink-0"><Clock size={15} /></div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800">Reserved Timeslot</p>
+                        <p className="text-[10px] font-bold text-emerald-700">{toEthTime(booking.startTime)} – {toEthTime(booking.endTime)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0"><Building size={15} /></div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800">{venue?.name || 'Selected Venue'}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">Secured Facility Allocation</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
+                <div className="bg-[#f8fafc] p-3 sm:p-4 rounded-xl border border-slate-100 h-24 sm:h-28 overflow-y-auto custom-scrollbar">
+                  <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed italic">
+                    {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Services / Timeslot Status */}
+            {canSeePrivateDetails ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Requested Services</label>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    {(!booking.technicalServices?.length && !booking.supportServices?.length) ? (
+                      <p className="text-slate-400 italic text-xs sm:text-sm">No extra services requested.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {booking.technicalServices.map(id => {
+                          const s = technicalServices.find(x => x.id === id);
+                          return s ? <span key={id} className="inline-flex px-2 py-1 rounded bg-white border border-slate-200 text-slate-700 text-[9px] sm:text-[10px] font-bold shadow-sm">{s.name}</span> : null;
+                        })}
+                        {booking.supportServices.map(id => {
+                          const s = supportServices.find(x => x.id === id);
+                          return s ? <span key={id} className="inline-flex px-2 py-1 rounded bg-white border border-slate-200 text-slate-700 text-[9px] sm:text-[10px] font-bold shadow-sm">{s.name}</span> : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {booking.letterAttachment && (
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Attachment</label>
+                    <a href={booking.letterAttachment} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center text-[#268053] shrink-0"><FileText size={16} /></div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#268053] text-[10px] sm:text-xs truncate">Official Request Letter</p>
+                          <p className="text-[9px] sm:text-[10px] text-emerald-600">View PDF</p>
+                        </div>
+                      </div>
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Timeslot Status</label>
+                  <div className="bg-emerald-50/50 p-4 sm:p-5 rounded-xl border border-emerald-100 space-y-2">
+                    <p className="text-xs sm:text-sm font-bold text-emerald-900">Scheduled Booking</p>
+                    <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                      This venue is currently reserved for the indicated timeslot. To book this facility for an available time, please proceed to the booking portal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 shrink-0 flex justify-center sm:justify-end">
-           <button onClick={onClose} className="w-full sm:w-auto px-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">Close Modal</button>
+          <button onClick={onClose} className="w-full sm:w-auto px-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">Close Modal</button>
         </div>
       </div>
     </div>
@@ -209,20 +280,16 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
 // --- Main View ---
 
 export default function CalendarView() {
-  const { bookings, venues, role, token, toEthTime, refreshData } = useApp();
+  const { bookings, venues, role, token, user, toEthTime, refreshData } = useApp();
   const [selectedVenue, setSelectedVenue] = useState<string>('all');
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Only authenticated staff/management can view administrative details and open modal
+
   const isStaff = Boolean(token) && ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
 
-  // Auto-refresh when calendar view mounts and every 20 seconds while active
   useEffect(() => {
     refreshData();
-    const timer = setInterval(() => {
-      refreshData();
-    }, 20000);
+    const timer = setInterval(() => { refreshData(); }, 20000);
     return () => clearInterval(timer);
   }, [refreshData]);
 
@@ -233,46 +300,44 @@ export default function CalendarView() {
   };
 
   const now = new Date();
-  const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() }); // month: 0..11
+  const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() });
 
   const prevMonth = () => setView(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 });
   const nextMonth = () => setView(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 });
 
   const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
   const firstDayGreg = new Date(view.year, view.month, 1, 12, 0, 0);
-  const startOffset = firstDayGreg.getDay(); // 0 = Sunday
+  const startOffset = firstDayGreg.getDay();
 
   const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
-     const day = i + 1;
-     const gregDate = new Date(view.year, view.month, day, 12, 0, 0);
-     return { day, gregDate };
+    const day = i + 1;
+    const gregDate = new Date(view.year, view.month, day, 12, 0, 0);
+    return { day, gregDate };
   });
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   return (
     <div className="pb-12" style={{ animation: 'fade-in-up 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-      
-      {isStaff && activeBooking && (
-        <EventDetailsModal 
-          booking={activeBooking} 
-          onClose={() => setActiveBooking(null)} 
+
+      {activeBooking && (
+        <EventDetailsModal
+          booking={activeBooking}
+          onClose={() => setActiveBooking(null)}
           toEthTime={toEthTime}
         />
       )}
 
-      {/* Header Area */}
+      {/* Header */}
       <div className="mb-6 sm:mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 tracking-tight flex items-center gap-2 sm:gap-3">
-             <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#268053]" /> Master Schedule
+            <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#268053]" /> Master Schedule
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 sm:mt-2">Full Master Schedule viewing all pending and confirmed events.</p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full lg:w-auto">
-          
-          {/* Dynamic Legend based on Role */}
           {isStaff ? (
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
               <span className="flex items-center gap-1.5 text-amber-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-amber-500" /> Pending</span>
@@ -300,7 +365,6 @@ export default function CalendarView() {
                 {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
             </div>
-
             <button
               onClick={handleManualRefresh}
               title="Refresh calendar schedule"
@@ -313,121 +377,133 @@ export default function CalendarView() {
         </div>
       </div>
 
-      {/* Massive Calendar Grid - MOBILE RESPONSIVE SCROLL */}
+      {/* Calendar Grid */}
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
-        
-        {/* Navigation Bar */}
+
+        {/* Nav Bar */}
         <div className="bg-[#111827] text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
           <button onClick={prevMonth} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
             <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
           </button>
-          
           <h2 className="text-lg sm:text-2xl font-black tracking-widest uppercase">
-             {GREG_MONTHS[view.month]} {view.year}
+            {GREG_MONTHS[view.month]} {view.year}
           </h2>
-          
           <button onClick={nextMonth} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
             <ChevronRight size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        {/* HORIZONTAL SCROLL WRAPPER FOR GRID */}
         <div className="overflow-x-auto custom-scrollbar w-full">
-          {/* Minimum width forces grid to stay big enough, enables swipe on mobile */}
           <div className="min-w-[900px] lg:min-w-full flex flex-col">
-            
-            {/* Days Header */}
+
+            {/* Day headers */}
             <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
               {GREG_DAYS.map(d => (
                 <div key={d} className="text-center py-2 sm:py-3 text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest border-r border-slate-200 last:border-0">
-                   {d}
+                  {d}
                 </div>
               ))}
             </div>
 
-            {/* The Grid Boxes */}
+            {/* Grid boxes */}
             <div className="grid grid-cols-7 bg-slate-200 gap-px">
-              
-              {/* Empty offset padding */}
+
               {Array.from({ length: startOffset }).map((_, i) => (
                 <div key={`pad-${i}`} className="min-h-[120px] sm:min-h-[160px] bg-[#f8fafc]/80" />
               ))}
-              
+
               {calendarDays.map(({ day, gregDate }) => {
-                 const dateStr = format(gregDate, 'yyyy-MM-dd');
-                 const isPastDay = dateStr < todayStr;
-                 
-                 // Find bookings for this box
-                 const dayBookings = bookings.filter(b => {
-                    if (isPastDay) return false;
-                    let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
-                    
-                    let schedules = b.dailySchedules;
-                    if (typeof schedules === 'string') {
-                      try { schedules = JSON.parse(schedules); } catch { schedules = []; }
-                    }
-                    if (Array.isArray(schedules) && schedules.length > 0) {
-                      matchesDate = schedules.some((s: any) => (s?.date || '').startsWith(dateStr));
-                    }
+                const dateStr = format(gregDate, 'yyyy-MM-dd');
+                const isPastDay = dateStr < todayStr;
 
-                    const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
-                    const bStatus = (b.status || '').trim().toLowerCase();
-                    const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(bStatus);
-                    return matchesDate && matchVenue && validStatus;
-                 });
+                const dayBookings = bookings.filter(b => {
+                  if (isPastDay) return false;
+                  let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
+                  let schedules: any[] = Array.isArray(b.dailySchedules) ? b.dailySchedules : [];
+                  if (typeof b.dailySchedules === 'string') {
+                    try { schedules = JSON.parse(b.dailySchedules as any); } catch { schedules = []; }
+                  }
+                  if (Array.isArray(schedules) && schedules.length > 0) {
+                    matchesDate = schedules.some((s: any) => (s?.date || '').startsWith(dateStr));
+                  }
+                  const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
+                  const bStatus = (b.status || '').trim().toLowerCase();
+                  const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(bStatus);
+                  return matchesDate && matchVenue && validStatus;
+                });
 
-                 return (
-                   <div
-                     key={day}
-                     className={`min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 flex flex-col transition-colors group ${isPastDay ? 'bg-slate-50' : 'bg-white'}`}
-                   >
-                     <div className="flex justify-end mb-1 sm:mb-2">
-                       <span className={`text-xs sm:text-sm font-black transition-colors ${isPastDay ? 'text-slate-300' : 'text-slate-400 group-hover:text-slate-800'}`}>{day}</span>
-                     </div>
-                     
-                     <div className="flex-1 space-y-1 sm:space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
-                       {!isPastDay && dayBookings.map(b => {
-                          const cfg = getStatusProps(b.status, isStaff);
-                          const venueInfo = venues.find(v => v.id?.toString() === b.venueId?.toString());
-                          const venueName = venueInfo?.name || 'Unknown Venue';
-                          
-                          return (
-                            <div 
-                              key={b.id} 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                if (isStaff) setActiveBooking(b); 
-                              }}
-                              className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all ${cfg.bg} ${cfg.border} ${cfg.borderLeft} ${isStaff ? 'cursor-pointer hover:-translate-y-px hover:shadow-md' : 'cursor-default'}`}
-                            >
-                               <div className={`flex items-center justify-between gap-1 font-black text-[8px] sm:text-[10px] uppercase tracking-wider ${cfg.color} opacity-90`}>
-                                  <span className="flex items-center gap-1 truncate">
-                                    {cfg.icon}
-                                    <span className="truncate">{cfg.label}</span>
-                                  </span>
-                               </div>
-                               
-                               {isStaff && (
-                                 <div className="flex items-center gap-1 font-bold text-[9px] sm:text-xs truncate mt-[1px] sm:mt-0.5">
-                                    <User size={10} className="shrink-0 opacity-60 text-slate-500 hidden sm:block" />
-                                    <span className="truncate text-slate-700">{b.organizerName}</span>
-                                 </div>
-                               )}
+                return (
+                  <div
+                    key={day}
+                    className={`min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 flex flex-col transition-colors group ${isPastDay ? 'bg-slate-50' : 'bg-white'}`}
+                  >
+                    <div className="flex justify-end mb-1 sm:mb-2">
+                      <span className={`text-xs sm:text-sm font-black transition-colors ${isPastDay ? 'text-slate-300' : 'text-slate-400 group-hover:text-slate-800'}`}>{day}</span>
+                    </div>
 
-                               <div className={`text-[9px] sm:text-[10px] font-medium truncate opacity-90 ${isStaff ? 'sm:pl-3.5 text-slate-600' : 'text-slate-800 font-bold'}`}>
-                                  {b.eventTitle}
-                               </div>
+                    <div className="flex-1 space-y-1 sm:space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
+                      {!isPastDay && dayBookings.map(b => {
+                        const cfg = getStatusProps(b.status, isStaff);
+                        const venueInfo = venues.find(v => v.id?.toString() === b.venueId?.toString());
+                        const venueName = venueInfo?.name || 'Unknown Venue';
 
-                               <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isStaff ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
-                                  <MapPin size={8} className="shrink-0 sm:w-[10px] sm:h-[10px]" />
-                                  <span className="truncate">{venueName}</span>
-                               </div>
+                        // Resolve per-day timeslot
+                        const { startTime, endTime, isAllDay } = resolveTimeslot(b, dateStr);
+                        const timeslotLabel = isAllDay
+                          ? 'All Day'
+                          : (startTime && endTime ? `${toEthTime(startTime)} - ${toEthTime(endTime)}` : '');
+
+                        const isMyBooking = Boolean(token) && Boolean(user) && (
+                          b.userId?.toString() === user?.id?.toString() ||
+                          b.organizerEmail?.toLowerCase() === user?.email?.toLowerCase()
+                        );
+
+                        return (
+                          <div
+                            key={b.id}
+                            onClick={(e) => { e.stopPropagation(); setActiveBooking(b); }}
+                            className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all cursor-pointer hover:-translate-y-px hover:shadow-md ${cfg.bg} ${cfg.border} ${cfg.borderLeft}`}
+                          >
+                            {/* Status label */}
+                            <div className={`flex items-center gap-1 font-black text-[8px] sm:text-[10px] uppercase tracking-wider ${cfg.color} opacity-90`}>
+                              <span className="flex items-center gap-1 truncate">
+                                {cfg.icon}
+                                <span className="truncate">{cfg.label}</span>
+                              </span>
                             </div>
-                          );
-                       })}
-                     </div>
-                   </div>
-                 );
+
+                            {/* Timeslot badge — visible to ALL users */}
+                            {timeslotLabel && (
+                              <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-black text-[#1b5e3a] bg-white/90 px-1.5 py-0.5 rounded border border-emerald-200/80 w-fit max-w-full">
+                                <Clock size={8} className="shrink-0 text-[#268053] sm:w-[10px] sm:h-[10px]" />
+                                <span className="truncate">{timeslotLabel}</span>
+                              </div>
+                            )}
+
+                            {/* Organizer name — staff and own bookings only */}
+                            {(isStaff || isMyBooking) && b.organizerName && b.organizerName !== 'Private Booking' && (
+                              <div className="flex items-center gap-1 font-bold text-[9px] sm:text-xs truncate mt-[1px] sm:mt-0.5">
+                                <User size={10} className="shrink-0 opacity-60 text-slate-500 hidden sm:block" />
+                                <span className="truncate text-slate-700">{b.organizerName}</span>
+                              </div>
+                            )}
+
+                            {/* Event title */}
+                            <div className={`text-[9px] sm:text-[10px] font-medium truncate opacity-90 ${isStaff ? 'sm:pl-3.5 text-slate-600' : 'text-slate-800 font-bold'}`}>
+                              {b.eventTitle}
+                            </div>
+
+                            {/* Venue */}
+                            <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isStaff ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
+                              <MapPin size={8} className="shrink-0 sm:w-[10px] sm:h-[10px]" />
+                              <span className="truncate">{venueName}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
               })}
             </div>
           </div>

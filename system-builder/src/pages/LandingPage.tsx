@@ -197,7 +197,7 @@ function ScheduleCarousel({ bookings, onSelect, toEthTime }: ScheduleCarouselPro
 
               return (
                 <button
-                  key={b.id}
+                  key={`${b.id}-${b.startDate}-${b.startTime}`}
                   onClick={() => onSelect(b)}
                   className="w-full flex items-center justify-between bg-slate-50/50 px-3 py-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all active:scale-[0.98] group/item"
                 >
@@ -205,7 +205,7 @@ function ScheduleCarousel({ bookings, onSelect, toEthTime }: ScheduleCarouselPro
                     <span className="text-xs font-bold text-slate-700 group-hover/item:text-emerald-700 truncate">{getShortGregDate(b.startDate)}</span>
                   </div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight group-hover/item:text-emerald-600 flex items-center gap-1.5 shrink-0">
-                    <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[8px] ${isConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${isConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                       {isConfirmed ? 'Confirmed' : 'Pending'}
                     </span>
                     {toEthTime(b.startTime)} - {toEthTime(b.endTime)}
@@ -366,7 +366,9 @@ export default function LandingPage() {
     const nowTimeStr = format(now, 'HH:mm');
 
     const entries: Booking[] = [];
-    const activeBookings = bookings.filter(b => b.venueId === venueId && CONFIRMED_PAID_STATUSES.includes((b.status || '').toLowerCase()));
+    const activeBookings = bookings.filter(
+      b => b.venueId === venueId && !['rejected', 'cancelled'].includes((b.status || '').toLowerCase())
+    );
 
     for (const b of activeBookings) {
       if (b.dailySchedules && b.dailySchedules.length > 0) {
