@@ -39,6 +39,7 @@ class Command(BaseCommand):
             {'trigger': 'reminder_24h', 'subject': 'Reminder: Your Event Starts Tomorrow!', 'body': 'Dear {name},\n\nThis is a friendly reminder that your event "{event}" at {venue} is scheduled to begin tomorrow. Please ensure all preparations are in place.'},
             {'trigger': 'reminder_48h_pay', 'subject': 'Action Required: Pending Payment for {event}', 'body': 'Dear {name},\n\nYour booking for {event} (Ref: {ref}) is currently pending payment. Please note that unconfirmed bookings may be automatically released or overridden. Kindly complete your payment to secure the venue.'},
             {'trigger': 'last_day', 'subject': 'Event Conclusion: {event}', 'body': 'Dear {name},\n\nToday marks the conclusion of your scheduled event "{event}". We kindly remind you to ensure all personal belongings and external equipment are cleared from the venue. Thank you.'},
+            {'trigger': 'event_mgmt_notification', 'subject': 'Ministry Approved Booking: {event} (Ref: MOA-BKG-{ref})', 'body': 'Dear Event Management Team,\n\nThe booking request for \"{event}\" has been reviewed and approved by Ministry Leadership ({officer}).\n\nThe request is now ready for Event Management review, scheduling verification, service coordination, and payment processing. Please log in to the portal to manage this booking.'},
         ]
 
         for t in templates:
