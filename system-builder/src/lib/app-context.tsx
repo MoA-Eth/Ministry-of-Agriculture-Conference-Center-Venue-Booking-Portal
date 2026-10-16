@@ -305,7 +305,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               organizerName: 'Private Booking',
               organizerEmail: 'Hidden',
               organizerPhone: 'Hidden',
-              organizerOrganization: 'Protected',
+              organizerOrganization: b.organizerOrganization || '',
               eventDescription: 'This time slot has been secured by another user.',
               totalPrice: 0,
               participantCount: 0,

@@ -279,7 +279,7 @@ export default function LandingPage() {
               organizerName: 'Private Booking',
               organizerEmail: 'Hidden',
               organizerPhone: 'Hidden',
-              organizerOrganization: 'Protected',
+              organizerOrganization: b.organizerOrganization || '',
               eventDescription: 'This session has been reserved.',
               letterAttachment: null,
             };

@@ -103,6 +103,7 @@ function StatusBadge({ status }: { status: BookingStatus }) {
 function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: () => void }) {
   const { venues, technicalServices, supportServices, toEthTime } = useApp();
   const venue = venues.find(v => v.id === booking.venueId);
+  const dept = (booking.organizerOrganization || (booking as any).organization || (booking as any).organizer_organization || '').trim();
 
   const gregDateFull = (gregStr: string) => {
     try {
@@ -165,8 +166,19 @@ function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: ()
             </div>
             <div className="space-y-6">
                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Organizer Contact</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Booking Department & Contact</label>
                   <div className="space-y-3 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                     {dept && dept !== 'Protected' && (
+                       <div className="flex items-start gap-3 pb-3 border-b border-slate-200/70">
+                         <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#1b5e3a] flex items-center justify-center shrink-0 mt-0.5">
+                           <Building2 size={16} />
+                         </div>
+                         <div className="min-w-0 flex-1">
+                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Department</p>
+                           <p className="text-xs sm:text-sm font-black text-slate-900 break-words leading-snug">{dept}</p>
+                         </div>
+                       </div>
+                     )}
                      <div className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><User size={14} /></div>
                         <span className="text-sm font-bold text-slate-700">{booking.organizerName}</span>
@@ -1210,23 +1222,32 @@ export default function Dashboard() {
                    <p className="text-slate-400 font-medium italic">No events scheduled for this day.</p>
                 </div>
               ) : (
-                selectedDayBookings.bookings.map(b => (
-                  <div key={b.id} className="p-5 rounded-2xl border border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#268053] flex items-center justify-center border border-emerald-100 group-hover:scale-110 transition-transform">
-                        <Building2 size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 leading-tight">{b.eventTitle}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock size={10} /> {b.startTime} - {b.endTime}</span>
-                           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Building size={10} /> {b.venueName}</span>
+                selectedDayBookings.bookings.map(b => {
+                  const bDept = (b.organizerOrganization || (b as any).organization || (b as any).organizer_organization || '').trim();
+                  return (
+                    <div key={b.id} className="p-5 rounded-2xl border border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#268053] flex items-center justify-center border border-emerald-100 group-hover:scale-110 transition-transform">
+                          <Building2 size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 leading-tight">{b.eventTitle}</p>
+                          {bDept && bDept !== 'Protected' && (
+                            <p className="text-xs font-bold text-[#1b5e3a] flex items-start gap-1 mt-0.5">
+                              <Building2 size={12} className="text-[#268053] shrink-0 mt-0.5" />
+                              <span className="break-words leading-tight">{bDept}</span>
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1">
+                             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock size={10} /> {b.startTime} - {b.endTime}</span>
+                             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Building size={10} /> {b.venueName}</span>
+                          </div>
                         </div>
                       </div>
+                      <StatusBadge status={b.status as any} />
                     </div>
-                    <StatusBadge status={b.status as any} />
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">

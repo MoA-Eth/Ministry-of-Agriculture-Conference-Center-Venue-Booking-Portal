@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { format } from 'date-fns';
 import { Booking } from '@/lib/types';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Building2, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw } from 'lucide-react';
 
 const GREG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const GREG_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -82,6 +82,7 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
     booking.organizerEmail?.toLowerCase() === user?.email?.toLowerCase()
   );
   const canSeePrivateDetails = isStaff || isMyBooking;
+  const dept = (booking.organizerOrganization || (booking as any).organization || (booking as any).organizer_organization || '').trim();
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
@@ -166,8 +167,19 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
             <div className="space-y-6">
               {canSeePrivateDetails ? (
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Organizer Contact</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Booking Department & Contact</label>
                   <div className="space-y-3 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100">
+                    {dept && dept !== 'Protected' && (
+                      <div className="flex items-start gap-3 pb-3 border-b border-slate-200/70">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#1b5e3a] flex items-center justify-center shrink-0 mt-0.5">
+                          <Building2 size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Department</p>
+                          <p className="text-xs sm:text-sm font-black text-slate-900 break-words leading-snug">{dept}</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3">
                       <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400 shrink-0"><User size={14} /></div>
                       <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">{booking.organizerName}</span>
@@ -188,6 +200,17 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Reservation Briefing</label>
                   <div className="space-y-3 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100">
+                    {dept && dept !== 'Protected' && (
+                      <div className="flex items-start gap-3 pb-2.5 border-b border-slate-200/70">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-[#1b5e3a] flex items-center justify-center shrink-0 mt-0.5">
+                          <Building2 size={15} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-slate-800 break-words leading-snug">{dept}</p>
+                          <p className="text-[9px] sm:text-[10px] text-emerald-700 font-bold uppercase tracking-tight">Booking Department</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 rounded-lg bg-emerald-100 text-[#268053] flex items-center justify-center shrink-0"><Clock size={15} /></div>
                       <div className="min-w-0">
@@ -457,6 +480,7 @@ export default function CalendarView() {
                           b.userId?.toString() === user?.id?.toString() ||
                           b.organizerEmail?.toLowerCase() === user?.email?.toLowerCase()
                         );
+                        const dept = (b.organizerOrganization || (b as any).organization || (b as any).organizer_organization || '').trim();
 
                         return (
                           <div
@@ -480,18 +504,29 @@ export default function CalendarView() {
                               </div>
                             )}
 
-                            {/* Organizer name — staff and own bookings only */}
-                            {(isStaff || isMyBooking) && b.organizerName && b.organizerName !== 'Private Booking' && (
-                              <div className="flex items-center gap-1 font-bold text-[9px] sm:text-xs truncate mt-[1px] sm:mt-0.5">
-                                <User size={10} className="shrink-0 opacity-60 text-slate-500 hidden sm:block" />
-                                <span className="truncate text-slate-700">{b.organizerName}</span>
+                            {/* Event title — bold and above organizer name */}
+                            <div className="font-bold text-xs sm:text-[13px] text-slate-900 leading-snug break-words mt-0.5" style={{ fontWeight: 700 }}>
+                              {b.eventTitle}
+                            </div>
+
+                            {/* Booking Department — on top of organizer name */}
+                            {dept && dept !== 'Protected' && (
+                              <div
+                                className="flex items-start gap-1 text-[8px] sm:text-[9px] font-bold text-[#1b5e3a] bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-200/60 mt-[1px]"
+                                title={`Department: ${dept}`}
+                              >
+                                <Building2 size={8} className="shrink-0 text-[#268053] sm:w-[9px] sm:h-[9px] mt-0.5" />
+                                <span className="break-words leading-tight">{dept}</span>
                               </div>
                             )}
 
-                            {/* Event title */}
-                            <div className={`text-[9px] sm:text-[10px] font-medium truncate opacity-90 ${isStaff ? 'sm:pl-3.5 text-slate-600' : 'text-slate-800 font-bold'}`}>
-                              {b.eventTitle}
-                            </div>
+                            {/* Organizer name — staff and own bookings only */}
+                            {(isStaff || isMyBooking) && b.organizerName && b.organizerName !== 'Private Booking' && (
+                              <div className="flex items-center gap-1 font-medium text-[8px] sm:text-[9px] text-slate-600 truncate mt-[1px]">
+                                <User size={10} className="shrink-0 opacity-60 text-slate-500 hidden sm:block" />
+                                <span className="truncate">{b.organizerName}</span>
+                              </div>
+                            )}
 
                             {/* Venue */}
                             <div className={`flex items-center gap-1 mt-[1px] sm:mt-0.5 text-[8px] sm:text-[9px] font-bold opacity-80 ${isStaff ? 'sm:pl-3.5 text-slate-500' : 'text-slate-600'}`}>
