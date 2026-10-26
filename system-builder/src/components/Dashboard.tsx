@@ -507,11 +507,42 @@ export default function Dashboard() {
   }, [bookings]);
 
   // ─── 10. PRIORITY EVENTS (Next 7 days) ─────────────────────
+  // Shows all operational bookings for the next 7 days, including pending/tentative bookings
   const priorityEvents = useMemo(() => {
     const sevenDaysOut = format(addDays(today, 7), 'yyyy-MM-dd');
-    const activeStatuses = ['confirmed', 'reserved', 'paid', 'partial_paid', 'approved', 'override'];
-    return bookings.filter(b => {
-      return b.startDate >= todayStr && b.startDate <= sevenDaysOut && activeStatuses.includes(b.status);
+    const excludedStatuses = ['cancelled', 'rejected'];
+    return rawBookings.filter(b => {
+      const s = (b.status || '').toLowerCase();
+      if (excludedStatuses.includes(s)) return false;
+      if (selectedVenue !== 'all' && String(b.venueId) !== String(selectedVenue)) return false;
+      if (selectedStatus !== 'all') {
+        if (selectedStatus === 'pending') {
+          if (!['pending', 'reserved'].includes(s)) return false;
+        } else if (selectedStatus === 'approved') {
+          if (!['management_approved', 'approved'].includes(s)) return false;
+        } else if (selectedStatus === 'partial_paid') {
+          if (s !== 'partial_paid') return false;
+        } else if (selectedStatus === 'confirmed') {
+          if (!['paid', 'confirmed', 'completed'].includes(s)) return false;
+        } else if (selectedStatus === 'override') {
+          if (s !== 'override' && !(b.eventTitle || '').includes('VIP OVERRIDE')) return false;
+        } else if (selectedStatus === 'rejected') {
+          return false;
+        } else if (selectedStatus === 'cancelled') {
+          return false;
+        } else {
+          if (s !== selectedStatus) return false;
+        }
+      }
+
+      // Event is relevant if it spans across or touches the upcoming 7 days: [todayStr, sevenDaysOut]
+      const bStart = b.startDate || '';
+      const bEnd = b.endDate || bStart;
+      const inRange = (bStart <= sevenDaysOut && bEnd >= todayStr) ||
+        (bStart >= todayStr && bStart <= sevenDaysOut) ||
+        (b.dailySchedules?.some(ds => ds.date >= todayStr && ds.date <= sevenDaysOut));
+
+      return inRange;
     }).sort((a, b) => {
       const aDate = a.startDate || '';
       const bDate = b.startDate || '';
@@ -519,7 +550,7 @@ export default function Dashboard() {
       const bTime = b.startTime || b.dailySchedules?.[0]?.startTime || '';
       return aDate.localeCompare(bDate) || aTime.localeCompare(bTime);
     });
-  }, [bookings, todayStr]);
+  }, [rawBookings, selectedVenue, selectedStatus, today, todayStr]);
 
   // Pagination for Priority Events
   const [currentPage, setCurrentPage] = useState(1);
@@ -1044,25 +1075,69 @@ export default function Dashboard() {
             <div className="grid gap-4 md:grid-cols-2">
               {paginatedPriority.map(b => {
                 const venue = venues.find(v => v.id === b.venueId);
-                const isUrgent = b.status === 'reserved';
+                const s = (b.status || '').toLowerCase();
+                const isPendingOrTentative = ['pending', 'reserved'].includes(s);
+                const isMgmtApproved = s === 'management_approved';
+                const isAdvancePaid = s === 'partial_paid';
+                const isPaidOrConfirmed = ['paid', 'confirmed', 'completed'].includes(s);
+                const isOverride = s === 'approved' || s === 'override' || (b.eventTitle || '').includes('VIP OVERRIDE');
+
                 const greg = getGregParts(b.startDate);
                 const isConflict = conflicts.some(c => c.id === b.id);
                 const daysAway = differenceInDays(new Date(b.startDate), today);
-                const daysLabel = daysAway === 0 ? 'Today' : daysAway === 1 ? 'Tomorrow' : `${daysAway}d away`;
+                const daysLabel = daysAway < 0 ? 'Ongoing' : daysAway === 0 ? 'Today' : daysAway === 1 ? 'Tomorrow' : `${daysAway}d away`;
+
+                const dateBoxClass = isPendingOrTentative
+                  ? 'bg-amber-100 text-amber-700 border-amber-500/20'
+                  : isMgmtApproved
+                  ? 'bg-teal-100 text-teal-700 border-teal-500/20'
+                  : isAdvancePaid
+                  ? 'bg-blue-100 text-blue-700 border-blue-500/20'
+                  : isOverride
+                  ? 'bg-purple-100 text-purple-700 border-purple-500/20'
+                  : 'bg-emerald-100 text-emerald-700 border-emerald-500/20';
 
                 return (
                   <div key={b.id} onClick={(e) => { 
                     e.stopPropagation(); setActiveBooking(b); 
-                  }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 group cursor-pointer border ${isConflict ? 'bg-red-50/50 border-red-100 hover:border-red-200' : 'bg-[#f8fafc] border-transparent hover:bg-white hover:shadow-xl hover:border-emerald-100'}`}>
-                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border-b-4 ${isUrgent ? 'bg-amber-100 text-amber-600 border-amber-500/20' : 'bg-emerald-100 text-emerald-600 border-emerald-500/20'}`}>
+                  }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 group cursor-pointer border ${isConflict ? 'bg-red-50/50 border-red-100 hover:border-red-200' : isPendingOrTentative ? 'bg-amber-50/20 border-amber-100/60 hover:bg-white hover:shadow-xl hover:border-amber-300' : 'bg-[#f8fafc] border-transparent hover:bg-white hover:shadow-xl hover:border-emerald-100'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border-b-4 ${dateBoxClass}`}>
                       <span className="text-[9px] font-black uppercase leading-none mb-0.5">{greg.month}</span>
                       <span className="text-xl font-black leading-none">{greg.day}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <p className="font-black text-slate-900 group-hover:text-[#268053] transition-colors truncate text-sm">{b.eventTitle}</p>
-                        {isUrgent && <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full animate-pulse shrink-0">PENDING</span>}
-                        {isConflict && <span className="px-2 py-0.5 bg-red-600 text-white text-[8px] font-black rounded-full shrink-0">CONFLICT</span>}
+                        {isPendingOrTentative && (
+                          <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full animate-pulse shrink-0">
+                            PENDING / TENTATIVE
+                          </span>
+                        )}
+                        {isMgmtApproved && (
+                          <span className="px-2 py-0.5 bg-teal-600 text-white text-[8px] font-black rounded-full shrink-0">
+                            MOA APPROVED
+                          </span>
+                        )}
+                        {isAdvancePaid && (
+                          <span className="px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black rounded-full shrink-0">
+                            ADVANCE PAID
+                          </span>
+                        )}
+                        {isPaidOrConfirmed && (
+                          <span className="px-2 py-0.5 bg-emerald-600 text-white text-[8px] font-black rounded-full shrink-0">
+                            CONFIRMED
+                          </span>
+                        )}
+                        {isOverride && (
+                          <span className="px-2 py-0.5 bg-purple-600 text-white text-[8px] font-black rounded-full shrink-0">
+                            VIP OVERRIDE
+                          </span>
+                        )}
+                        {isConflict && (
+                          <span className="px-2 py-0.5 bg-red-600 text-white text-[8px] font-black rounded-full shrink-0">
+                            CONFLICT
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
@@ -1077,11 +1152,18 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="hidden sm:flex flex-col items-end shrink-0">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${daysAway === 0 ? 'bg-red-100 text-red-700' : daysAway <= 2 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        daysAway < 0 ? 'bg-indigo-100 text-indigo-700' :
+                        daysAway === 0 ? 'bg-red-100 text-red-700' : 
+                        daysAway <= 2 ? 'bg-amber-100 text-amber-700' : 
+                        'bg-slate-100 text-slate-600'
+                      }`}>
                         {daysLabel}
                       </span>
                       {b.totalPrice ? (
-                        <span className="text-[10px] font-bold text-emerald-600 mt-1">ETB {b.totalPrice.toLocaleString()}</span>
+                        <span className={`text-[10px] font-bold mt-1 ${isPendingOrTentative ? 'text-amber-700' : 'text-emerald-600'}`}>
+                          ETB {b.totalPrice.toLocaleString()}
+                        </span>
                       ) : null}
                     </div>
                   </div>
