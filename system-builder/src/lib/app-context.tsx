@@ -35,6 +35,7 @@ interface AppContextType {
   extendBooking: (id: string, params: { newEndDate?: string; newEndTime?: string; dailySchedules?: any[]; reason?: string }) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   addDepartment: (name: string, category?: string) => Promise<void>;
+  updateDepartment: (id: string | number, name: string, category?: string) => Promise<void>;
   removeDepartment: (id: string | number) => Promise<void>;
   addService: (type: 'technical' | 'support', name: string, price: number) => Promise<void>;
   removeService: (type: 'technical' | 'support', id: string) => Promise<void>;
@@ -661,6 +662,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshData, getHeaders]);
 
+  const updateDepartment = useCallback(async (id: string | number, name: string, category = 'executive_office') => {
+    try {
+      const res = await fetch(`${API_BASE}/departments/${id}/`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ name: name.trim(), category })
+      });
+      if (res.ok) {
+        const itemType = category === 'project' ? 'Project' : 'Ministry Executive Office';
+        toast.success(`${itemType} updated successfully`);
+        const updated = await res.json().catch(() => null);
+        if (updated) {
+          setDepartments(prev => (Array.isArray(prev) ? prev : []).map(d => d.id === id ? updated : d));
+        }
+        refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.name?.[0] || data.error || data.detail || 'Failed to update item');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update item');
+      throw error;
+    }
+  }, [refreshData, getHeaders]);
+
   const removeDepartment = useCallback(async (id: string | number) => {
     try {
       const res = await fetch(`${API_BASE}/departments/${id}/`, {
@@ -786,7 +812,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       approveManagement,
       technicalServices, supportServices, servicePrices,
       addService, removeService, updateServicePrice,
-      addDepartment, removeDepartment,
+      addDepartment, updateDepartment, removeDepartment,
       acknowledgeTechnicalTask, toggleTechnicalServiceAvailability, acknowledgeCateringTask, toggleSupportServiceAvailability,
       auditLogs, toEthTime,
       refreshData

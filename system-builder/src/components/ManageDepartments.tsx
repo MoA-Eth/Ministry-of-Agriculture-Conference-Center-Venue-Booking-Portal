@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/lib/app-context';
+import { Department } from '@/lib/types';
 import { 
   Landmark, FolderKanban, Plus, Trash2, Search, 
-  X, CheckCircle2, Sparkles, Building2, Layers
+  X, CheckCircle2, Sparkles, Building2, Layers, Pencil
 } from 'lucide-react';
 import { Button } from './ui/button';
 
 export default function ManageDepartments() {
-  const { departments, addDepartment, removeDepartment } = useApp();
+  const { departments, addDepartment, updateDepartment, removeDepartment } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'executive_office' | 'project'>('all');
@@ -16,6 +17,12 @@ export default function ManageDepartments() {
   const [newDeptCategory, setNewDeptCategory] = useState<'executive_office' | 'project'>('executive_office');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
+
+  // Edit Modal State
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [editDeptName, setEditDeptName] = useState('');
+  const [editDeptCategory, setEditDeptCategory] = useState<'executive_office' | 'project'>('executive_office');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Group counts
   const executiveOffices = useMemo(() => {
@@ -55,6 +62,28 @@ export default function ManageDepartments() {
       // toast handled in context
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleStartEdit = (dept: Department) => {
+    setEditingDept(dept);
+    setEditDeptName(dept.name);
+    setEditDeptCategory(dept.category === 'project' ? 'project' : 'executive_office');
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDept || !editDeptName.trim()) return;
+
+    setIsUpdating(true);
+    try {
+      await updateDepartment(editingDept.id, editDeptName.trim(), editDeptCategory);
+      setEditingDept(null);
+      setEditDeptName('');
+    } catch {
+      // toast handled in context
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -269,15 +298,25 @@ export default function ManageDepartments() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id, item.name)}
-                    disabled={deletingId === item.id}
-                    title="Remove record"
-                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all shrink-0"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(item)}
+                      title="Edit record"
+                      className="p-2 rounded-xl text-slate-400 hover:text-[#268053] hover:bg-emerald-50 transition-all"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item.id, item.name)}
+                      disabled={deletingId === item.id}
+                      title="Remove record"
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -402,6 +441,132 @@ export default function ManageDepartments() {
                     <div className="flex items-center gap-1.5">
                       <Plus size={15} />
                       <span>Save Record</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── EDIT OFFICE / PROJECT MODAL ─── */}
+      {editingDept && (
+        <div
+          className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setEditingDept(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 font-sans"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#268053] flex items-center justify-center">
+                  <Pencil size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Edit Office or Project</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Update directory record details</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingDept(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="space-y-5">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 block mb-1.5">
+                  Office or Project Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={editDeptName}
+                  onChange={e => setEditDeptName(e.target.value)}
+                  placeholder="e.g. Office of the Minister or Agricultural Growth Program"
+                  className="w-full text-xs sm:text-sm font-bold bg-white border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#268053]/20 focus:border-[#268053] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 block mb-1.5">
+                  Category *
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditDeptCategory('executive_office')}
+                    className={`p-3.5 rounded-2xl border text-left flex flex-col gap-1 transition-all ${
+                      editDeptCategory === 'executive_office'
+                        ? 'border-[#268053] bg-emerald-50/70 ring-2 ring-[#268053]/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-black text-[#268053]">
+                      <Landmark size={15} />
+                      <span>Executive Office</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Executive Offices & Directorates
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditDeptCategory('project')}
+                    className={`p-3.5 rounded-2xl border text-left flex flex-col gap-1 transition-all ${
+                      editDeptCategory === 'project'
+                        ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-600/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-black text-blue-600">
+                      <FolderKanban size={15} />
+                      <span>Project</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Flagship Projects & Programs
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3.5 flex items-start gap-2.5 text-[11px] text-emerald-800">
+                <CheckCircle2 size={16} className="text-[#268053] shrink-0 mt-0.5" />
+                <span>Changes will immediately update across all forms and existing directory references.</span>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isUpdating}
+                  onClick={() => setEditingDept(null)}
+                  className="rounded-xl text-xs font-bold px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdating || !editDeptName.trim()}
+                  className="bg-[#268053] hover:bg-[#1b5e3a] text-white rounded-xl text-xs font-bold px-5"
+                >
+                  {isUpdating ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Updating...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 size={15} />
+                      <span>Save Changes</span>
                     </div>
                   )}
                 </Button>
