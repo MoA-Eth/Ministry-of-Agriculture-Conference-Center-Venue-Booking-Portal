@@ -6,10 +6,11 @@ import { format, parseISO } from 'date-fns';
 import {
   ChevronDown, ChevronUp, Clock, XCircle, Users, MapPin, Calendar,
   FileText, Activity, Trash2, Star, CreditCard, User, Mail, Phone,
-  CheckCircle2, AlertTriangle, Building2, ChevronLeft, ChevronRight, Filter, X, Crown, Search
+  CheckCircle2, AlertTriangle, Building2, ChevronLeft, ChevronRight, Filter, X, Crown, Search, Ban, CalendarPlus
 } from 'lucide-react';
 import { GregorianCalendar } from '@/components/ui/ethiopian-calendar';
 import { Booking } from '@/lib/types';
+import ExtendReservationModal from './ExtendReservationModal';
 
 // 1. STATUS STYLES
 const statusStyles: Record<string, { bg: string, text: string, label: string, dot: string }> = {
@@ -46,6 +47,10 @@ export default function ManageBookings() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [extendingBooking, setExtendingBooking] = useState<Booking | null>(null);
 
   // Sync activeTab when role changes or loads
   useEffect(() => {
@@ -220,6 +225,26 @@ export default function ManageBookings() {
     }
   };
 
+  const handleInitCancel = (b: Booking, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCancellingBooking(b);
+    setCancelReason('');
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancellingBooking) return;
+    setIsSubmittingCancel(true);
+    try {
+      await cancelBooking(String(cancellingBooking.id), cancelReason.trim());
+      setCancellingBooking(null);
+      setCancelReason('');
+    } catch (err) {
+      // Toast already shown
+    } finally {
+      setIsSubmittingCancel(false);
+    }
+  };
+
   const handleInitReject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setRejectingId(id);
@@ -314,6 +339,68 @@ export default function ManageBookings() {
           </div>
         );
       })()}
+
+      {/* Cancel Booking Confirmation Dialog */}
+      {cancellingBooking && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => !isSubmittingCancel && setCancellingBooking(null)}>
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 sm:p-7 border border-slate-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <Ban size={22} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-black text-slate-900 leading-tight">Cancel Booking Reservation</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5 truncate">
+                  MOA-BKG-{cancellingBooking.id} • {cancellingBooking.eventTitle}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3.5 mb-4 text-xs text-rose-900 leading-relaxed">
+              <p className="font-bold text-rose-950 mb-0.5">Audit Safe (No Record Loss):</p>
+              This will release the venue time slot for this booking. The reservation record will be safely retained in the database for auditing and historical tracking.
+            </div>
+
+            <div className="mb-5">
+              <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider block mb-1.5">
+                Cancellation Reason <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Specify reason for cancellation (e.g. Organizer requested withdrawal, emergency ministerial override, event postponed)..."
+                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl p-3 shadow-inner resize-none focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <Button
+                variant="ghost"
+                disabled={isSubmittingCancel}
+                onClick={() => setCancellingBooking(null)}
+                className="text-slate-600 font-bold text-xs"
+              >
+                Nevermind
+              </Button>
+              <Button
+                disabled={isSubmittingCancel}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md px-5"
+                onClick={handleConfirmCancel}
+              >
+                {isSubmittingCancel ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Cancelling...</span>
+                  </div>
+                ) : (
+                  'Confirm Cancellation'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6">
@@ -433,7 +520,7 @@ export default function ManageBookings() {
                 tab === 'partial' ? 'Advance Paid' :
                   tab === 'confirmed' ? 'Fully Paid' :
                     tab === 'vip' ? 'VIP Approved' :
-                      tab === 'rejected' ? 'Rejected' : 'All Bookings'}
+                      tab === 'rejected' ? 'Cancelled / Rejected' : 'All Bookings'}
             <span className={`ml-2 py-0.5 px-2.5 rounded-full text-xs transition-colors ${activeTab === tab ? 'bg-[#268053] text-white' : 'bg-slate-100 text-slate-500'
               }`}>
               {counts[tab]}
@@ -640,9 +727,6 @@ export default function ManageBookings() {
                             </Button>
                           </>
                         )}
-                        <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
-                          <XCircle className="w-4 h-4" />
-                        </Button>
                       </>
                     )}
 
@@ -656,9 +740,6 @@ export default function ManageBookings() {
                           {pendingActionId === `${safeId}-paid` ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" /> : null}
                           {pendingActionId === `${safeId}-paid` ? 'Processing...' : 'Confirm Full Paid'}
                         </Button>
-                        <Button variant="outline" className="text-red-600 hover:bg-red-50 border-red-200 shadow-sm h-9 sm:h-10 w-9 sm:w-10 p-0" onClick={(e) => handleInitReject(safeId, e)}>
-                          <XCircle className="w-4 h-4" />
-                        </Button>
                       </>
                     )}
 
@@ -666,6 +747,30 @@ export default function ManageBookings() {
                     {['paid', 'approved'].includes(statusLower) && role !== 'leadership' && (
                       <Button variant="outline" className="text-slate-700 border-slate-300 font-bold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-3" onClick={(e) => handleStatusChange(safeId, 'completed', e)}>
                         Mark Completed
+                      </Button>
+                    )}
+
+                    {/* Extend reservation at ANY stage for Event Management & Admin */}
+                    {['event_management', 'system_admin'].includes(role) && !['cancelled', 'rejected'].includes(statusLower) && !isRejecting && (
+                      <Button
+                        variant="outline"
+                        className="text-[#268053] hover:text-[#1b5e3a] hover:bg-emerald-50 border-emerald-200 font-bold text-xs sm:text-sm h-9 sm:h-10 px-3 shadow-sm"
+                        onClick={(e) => { e.stopPropagation(); setExtendingBooking(b); }}
+                        title="Extend existing venue reservation schedule"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Extend
+                      </Button>
+                    )}
+
+                    {/* Cancellation at ANY stage for Event Management & Admin */}
+                    {['event_management', 'system_admin'].includes(role) && statusLower !== 'cancelled' && !isRejecting && (
+                      <Button
+                        variant="outline"
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 font-bold text-xs sm:text-sm h-9 sm:h-10 px-3 shadow-sm"
+                        onClick={(e) => handleInitCancel(b, e)}
+                        title="Cancel this booking without deleting record"
+                      >
+                        <Ban className="w-3.5 h-3.5 mr-1 text-rose-500" /> Cancel
                       </Button>
                     )}
 
@@ -867,12 +972,37 @@ export default function ManageBookings() {
 
                   </div>
 
-                  {/* Admin Delete Action */}
-                  {role === 'system_admin' && (
-                    <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end">
-                      <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold px-6 py-5" onClick={(e) => handleDelete(safeId, e)}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete Booking Record
-                      </Button>
+                  {/* Event Management & Admin Actions */}
+                  {['event_management', 'system_admin'].includes(role) && (
+                    <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="text-xs text-slate-500 font-medium">
+                        <span className="font-bold text-slate-700">Audit Safe:</span> Cancelling releases facility allocation while retaining full historical records for reference and audit tracking.
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {!['cancelled', 'rejected'].includes(statusLower) && (
+                          <Button
+                            variant="outline"
+                            className="text-[#268053] hover:text-[#1b5e3a] hover:bg-emerald-50 border-emerald-300 font-bold px-5 py-2.5 text-xs sm:text-sm shadow-sm"
+                            onClick={(e) => { e.stopPropagation(); setExtendingBooking(b); }}
+                          >
+                            <CalendarPlus className="w-4 h-4 mr-2 text-emerald-600" /> Extend Reservation
+                          </Button>
+                        )}
+                        {statusLower !== 'cancelled' && (
+                          <Button
+                            variant="outline"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-300 font-bold px-5 py-2.5 text-xs sm:text-sm shadow-sm"
+                            onClick={(e) => handleInitCancel(b, e)}
+                          >
+                            <Ban className="w-4 h-4 mr-2 text-rose-500" /> Cancel Booking (Retain Record)
+                          </Button>
+                        )}
+                        {role === 'system_admin' && (
+                          <Button variant="ghost" className="text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs px-3 py-2" onClick={(e) => handleDelete(safeId, e)}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Purge Record
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -923,6 +1053,13 @@ export default function ManageBookings() {
             </div>
           </div>
         )}
+        {/* Extend Reservation Modal */}
+        <ExtendReservationModal
+          booking={extendingBooking}
+          isOpen={Boolean(extendingBooking)}
+          onClose={() => setExtendingBooking(null)}
+          onSuccess={() => setExtendingBooking(null)}
+        />
       </div>
     </div>
   );

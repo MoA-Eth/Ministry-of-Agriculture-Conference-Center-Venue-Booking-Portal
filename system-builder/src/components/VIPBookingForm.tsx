@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { format, parseISO, eachDayOfInterval, startOfDay } from 'date-fns';
 import { Paperclip, Star, AlertTriangle, UserPlus, Info, Loader2, ArrowRight, Phone, Coffee, Utensils, FileText } from 'lucide-react';
 import { EthiopianCalendar } from '@/components/ui/ethiopian-calendar';
+import DepartmentSelect from './DepartmentSelect';
 
 const steps = [
   { num: 1, label: 'VIP DETAILS' },
@@ -427,7 +428,18 @@ export default function VIPBookingForm({ onComplete }: { onComplete: () => void 
             
             <div className="grid sm:grid-cols-2 gap-6">
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Name *</label><input value={form.organizerName} onChange={e => setForm(p => ({ ...p, organizerName: e.target.value }))} className={inputClass('organizerName')} />{errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}</div>
-              <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Organization/Department *</label><input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} placeholder="Organization or Department" />{errors.organizerOrganization && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerOrganization}</p>}</div>
+              <div>
+                <DepartmentSelect
+                  value={form.organizerOrganization}
+                  onChange={(val) => {
+                    setForm(p => ({ ...p, organizerOrganization: val }));
+                    if (errors.organizerOrganization) {
+                      setErrors(p => ({ ...p, organizerOrganization: undefined }));
+                    }
+                  }}
+                  error={errors.organizerOrganization}
+                />
+              </div>
               <div><label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Email *</label><input type="email" value={form.organizerEmail} onChange={e => setForm(p => ({ ...p, organizerEmail: e.target.value }))} className={inputClass('organizerEmail')} />{errors.organizerEmail && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerEmail}</p>}</div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Phone *</label>

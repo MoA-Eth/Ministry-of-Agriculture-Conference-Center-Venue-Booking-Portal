@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-context';
 import { format } from 'date-fns';
 import { Booking } from '@/lib/types';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Building2, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, MapPin, User, CheckCircle2, Clock, Star, X as CloseIcon, Building, Building2, Mail, Phone, Clock3, AlertCircle, XCircle, FileText, Users, RefreshCw, Ban, CalendarPlus } from 'lucide-react';
+import ExtendReservationModal from './ExtendReservationModal';
 
 const GREG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const GREG_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -25,6 +26,7 @@ const adminStatusConfig = {
   management_approved: { label: 'MoA Approved', color: 'text-[#1b5e3a]', bg: 'bg-emerald-50/60', border: 'border-emerald-200', borderLeft: 'border-l-[#1b5e3a]', icon: <CheckCircle2 size={12} className="shrink-0 text-[#1b5e3a]" /> },
   partial_paid: { label: 'Advance Paid', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', borderLeft: 'border-l-blue-500', icon: <Clock size={12} className="shrink-0 text-blue-600" /> },
   paid: { label: 'Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', borderLeft: 'border-l-[#268053]', icon: <CheckCircle2 size={12} className="shrink-0 text-emerald-600" /> },
+  confirmed: { label: 'Confirmed', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', borderLeft: 'border-l-[#268053]', icon: <CheckCircle2 size={12} className="shrink-0 text-emerald-600" /> },
   approved: { label: 'VIP Override', color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', borderLeft: 'border-l-purple-500', icon: <Star size={12} className="shrink-0 text-purple-600" /> },
   completed: { label: 'Completed', color: 'text-slate-800', bg: 'bg-slate-200', border: 'border-slate-400', borderLeft: 'border-l-slate-600', icon: <CheckCircle2 size={12} className="shrink-0 text-slate-600" /> },
   rejected: { label: 'Rejected', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', borderLeft: 'border-l-red-500', icon: <XCircle size={12} className="shrink-0 text-red-600" /> },
@@ -42,7 +44,7 @@ const getStatusProps = (status: string, isAdmin: boolean) => {
   if (isAdmin) {
     return adminStatusConfig[s as keyof typeof adminStatusConfig] || adminStatusConfig.pending;
   } else {
-    if (['paid', 'approved', 'completed'].includes(s)) return userStatusConfig.confirmed;
+    if (['paid', 'approved', 'completed', 'confirmed'].includes(s)) return userStatusConfig.confirmed;
     if (['pending', 'management_approved', 'partial_paid'].includes(s)) return userStatusConfig.tentative;
     return userStatusConfig.cancelled;
   }
@@ -74,15 +76,37 @@ function resolveTimeslot(b: Booking, dateStr: string) {
 // --- Modal Component ---
 
 function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, onClose: () => void, toEthTime: (t: any) => string }) {
-  const { venues, technicalServices, supportServices, user, role, token } = useApp();
+  const { venues, technicalServices, supportServices, user, role, token, cancelBooking } = useApp();
   const venue = venues.find(v => v.id?.toString() === booking.venueId?.toString());
   const isStaff = Boolean(token) && ['system_admin', 'event_management', 'admin_finance', 'leadership'].includes(role || '');
+  const isEventMgmtOrAdmin = Boolean(token) && ['system_admin', 'event_management'].includes(role || '');
   const isMyBooking = Boolean(token) && Boolean(user) && (
     booking.userId?.toString() === user?.id?.toString() ||
     booking.organizerEmail?.toLowerCase() === user?.email?.toLowerCase()
   );
   const canSeePrivateDetails = isStaff || isMyBooking;
   const dept = (booking.organizerOrganization || (booking as any).organization || (booking as any).organizer_organization || '').trim();
+  const isBookingPast = Boolean(booking.endDate && booking.endDate < format(new Date(), 'yyyy-MM-dd'));
+
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
+
+  const canCancel = isEventMgmtOrAdmin || (role === 'organizer' && isMyBooking && ['pending', 'reserved'].includes((booking.status || '').toLowerCase()));
+
+  const handleExecuteCancel = async () => {
+    setIsSubmittingCancel(true);
+    try {
+      await cancelBooking(booking.id, cancelReason.trim());
+      setIsConfirmingCancel(false);
+      onClose();
+    } catch (err) {
+      // Toast already shown
+    } finally {
+      setIsSubmittingCancel(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
@@ -95,7 +119,17 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
             <CloseIcon size={20} />
           </button>
           <div className="relative z-10 pr-12 pt-2 sm:pt-4">
-            <StatusBadge status={booking.status} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusBadge status={booking.status} />
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-white/20 text-white border border-white/25 shadow-sm">
+                Ref: MOA-BKG-{booking.id}
+              </span>
+              {isBookingPast && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-black/25 text-emerald-200 border border-white/20 shadow-sm">
+                  Historical Record
+                </span>
+              )}
+            </div>
             <div className="mt-3 sm:mt-4">
               <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
                 {booking.eventTitle}
@@ -103,6 +137,63 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
             </div>
           </div>
         </div>
+
+        {/* Cancellation Confirmation Bar */}
+        {isConfirmingCancel && (
+          <div className="p-4 sm:p-6 bg-rose-50/90 border-b border-rose-200 animate-in fade-in duration-200">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
+                <Ban size={18} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm sm:text-base font-black text-rose-950">Cancel Booking Reservation</h3>
+                <p className="text-xs text-rose-800 font-medium mt-0.5">
+                  This will release the venue time slot for this booking. The reservation record will be safely retained in the database for audit tracking and history.
+                </p>
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="text-[10px] font-black text-rose-900 uppercase tracking-widest block mb-1">
+                Cancellation Reason <span className="font-normal text-rose-600">(Optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Specify cancellation reason (e.g. Organizer requested cancellation, conference postponed, room conflict)..."
+                className="w-full text-xs sm:text-sm bg-white border border-rose-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none shadow-inner"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isSubmittingCancel}
+                onClick={() => setIsConfirmingCancel(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 transition-all shadow-sm"
+              >
+                Nevermind
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingCancel}
+                onClick={handleExecuteCancel}
+                className="px-5 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-md flex items-center gap-1.5"
+              >
+                {isSubmittingCancel ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <>
+                    <Ban size={14} />
+                    <span>Confirm Cancellation</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 font-sans custom-scrollbar">
@@ -161,6 +252,36 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                   </div>
                 </div>
               </div>
+
+              {canSeePrivateDetails && (
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Audit & Tracking</label>
+                  <div className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100 text-[11px] text-slate-600 space-y-2">
+                    <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Reference ID</span>
+                      <span className="font-mono font-bold text-slate-900">MOA-BKG-{booking.id}</span>
+                    </div>
+                    {booking.createdAt && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Submission Date</span>
+                        <span className="font-medium text-slate-700">{getGregDateString(booking.createdAt.split('T')[0])}</span>
+                      </div>
+                    )}
+                    {booking.managementApprovedBy && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Management Approval</span>
+                        <span className="font-semibold text-[#1b5e3a]">{booking.managementApprovedBy}</span>
+                      </div>
+                    )}
+                    {booking.totalPrice !== undefined && Number(booking.totalPrice) > 0 && (
+                      <div className="flex justify-between items-center pt-1.5 border-t border-slate-200/60">
+                        <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Total Amount</span>
+                        <span className="font-bold text-emerald-700">{Number(booking.totalPrice).toLocaleString()} ETB</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Column 2: Organizer / Reservation Briefing + Description */}
@@ -281,9 +402,13 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Timeslot Status</label>
                   <div className="bg-emerald-50/50 p-4 sm:p-5 rounded-xl border border-emerald-100 space-y-2">
-                    <p className="text-xs sm:text-sm font-bold text-emerald-900">Scheduled Booking</p>
+                    <p className="text-xs sm:text-sm font-bold text-emerald-900">
+                      {isBookingPast ? 'Concluded Booking' : 'Scheduled Booking'}
+                    </p>
                     <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                      This venue is currently reserved for the indicated timeslot. To book this facility for an available time, please proceed to the booking portal.
+                      {isBookingPast
+                        ? 'This event has concluded. Historical record is preserved on the calendar for reference, operational tracking, and auditing.'
+                        : 'This venue is currently reserved for the indicated timeslot. To book this facility for an available time, please proceed to the booking portal.'}
                     </p>
                   </div>
                 </div>
@@ -292,9 +417,52 @@ function EventDetailsModal({ booking, onClose, toEthTime }: { booking: Booking, 
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 shrink-0 flex justify-center sm:justify-end">
-          <button onClick={onClose} className="w-full sm:w-auto px-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">Close Modal</button>
+        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            {isEventMgmtOrAdmin && !['cancelled', 'rejected'].includes((booking.status || '').toLowerCase()) && (
+              <button
+                type="button"
+                onClick={() => setIsExtending(true)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#268053] hover:bg-[#1b5e3a] transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+              >
+                <CalendarPlus size={15} />
+                Extend Reservation
+              </button>
+            )}
+
+            {canCancel && booking.status !== 'cancelled' && !isConfirmingCancel ? (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingCancel(true)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Ban size={15} className="text-rose-600" />
+                Cancel Booking (Retain Record)
+              </button>
+            ) : (
+              booking.status === 'cancelled' ? (
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertCircle size={14} className="text-slate-400" /> Booking is Cancelled (Record Retained)
+                </span>
+              ) : null
+            )}
+          </div>
+
+          <button onClick={onClose} className="w-full sm:w-auto px-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">
+            Close Modal
+          </button>
         </div>
+
+        {/* Extend Reservation Modal */}
+        <ExtendReservationModal
+          booking={booking}
+          isOpen={isExtending}
+          onClose={() => setIsExtending(false)}
+          onSuccess={() => {
+            setIsExtending(false);
+            onClose();
+          }}
+        />
       </div>
     </div>
   );
@@ -368,6 +536,7 @@ export default function CalendarView() {
               <span className="flex items-center gap-1.5 text-blue-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-blue-500" /> Advance Paid</span>
               <span className="flex items-center gap-1.5 text-emerald-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-[#268053]" /> Fully Paid</span>
               <span className="flex items-center gap-1.5 text-purple-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-purple-500" /> VIP</span>
+              <span className="flex items-center gap-1.5 text-slate-700 whitespace-nowrap"><span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded bg-slate-500" /> Completed</span>
             </div>
           ) : (
             <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto justify-center">
@@ -438,9 +607,9 @@ export default function CalendarView() {
               {calendarDays.map(({ day, gregDate }) => {
                 const dateStr = format(gregDate, 'yyyy-MM-dd');
                 const isPastDay = dateStr < todayStr;
+                const isToday = dateStr === todayStr;
 
                 const dayBookings = bookings.filter(b => {
-                  if (isPastDay) return false;
                   let matchesDate = b.startDate <= dateStr && b.endDate >= dateStr;
                   let schedules: any[] = Array.isArray(b.dailySchedules) ? b.dailySchedules : [];
                   if (typeof b.dailySchedules === 'string') {
@@ -451,21 +620,34 @@ export default function CalendarView() {
                   }
                   const matchVenue = selectedVenue === 'all' || b.venueId?.toString() === selectedVenue;
                   const bStatus = (b.status || '').trim().toLowerCase();
-                  const validStatus = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'].includes(bStatus);
+                  const validStatus = (isStaff
+                    ? ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed', 'confirmed', 'cancelled']
+                    : ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed', 'confirmed']
+                  ).includes(bStatus);
                   return matchesDate && matchVenue && validStatus;
                 });
 
                 return (
                   <div
                     key={day}
-                    className={`min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 flex flex-col transition-colors group ${isPastDay ? 'bg-slate-50' : 'bg-white'}`}
+                    className={`min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 flex flex-col transition-colors group ${
+                      isToday ? 'bg-emerald-50/30 ring-1 ring-inset ring-emerald-300/50' : (isPastDay ? 'bg-slate-50/70' : 'bg-white')
+                    }`}
                   >
                     <div className="flex justify-end mb-1 sm:mb-2">
-                      <span className={`text-xs sm:text-sm font-black transition-colors ${isPastDay ? 'text-slate-300' : 'text-slate-400 group-hover:text-slate-800'}`}>{day}</span>
+                      <span
+                        className={`text-xs sm:text-sm font-black transition-colors ${
+                          isToday
+                            ? 'w-6 h-6 rounded-full bg-[#268053] text-white flex items-center justify-center shadow-sm text-xs'
+                            : (isPastDay ? 'text-slate-400' : 'text-slate-500 group-hover:text-slate-900')
+                        }`}
+                      >
+                        {day}
+                      </span>
                     </div>
 
                     <div className="flex-1 space-y-1 sm:space-y-1.5 overflow-y-auto custom-scrollbar pr-1">
-                      {!isPastDay && dayBookings.map(b => {
+                      {dayBookings.map(b => {
                         const cfg = getStatusProps(b.status, isStaff);
                         const venueInfo = venues.find(v => v.id?.toString() === b.venueId?.toString());
                         const venueName = venueInfo?.name || 'Unknown Venue';
@@ -486,13 +668,16 @@ export default function CalendarView() {
                           <div
                             key={b.id}
                             onClick={(e) => { e.stopPropagation(); setActiveBooking(b); }}
-                            className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all cursor-pointer hover:-translate-y-px hover:shadow-md ${cfg.bg} ${cfg.border} ${cfg.borderLeft}`}
+                            className={`px-1.5 sm:px-2 py-1 sm:py-1.5 rounded border border-l-[3px] sm:border-l-[4px] shadow-sm flex flex-col gap-[1px] sm:gap-0.5 transition-all cursor-pointer hover:-translate-y-px hover:shadow-md ${cfg.bg} ${cfg.border} ${cfg.borderLeft} ${isPastDay ? 'opacity-90 hover:opacity-100' : ''}`}
                           >
-                            {/* Status label */}
-                            <div className={`flex items-center gap-1 font-black text-[8px] sm:text-[10px] uppercase tracking-wider ${cfg.color} opacity-90`}>
+                            {/* Status label & booking reference */}
+                            <div className={`flex items-center justify-between gap-1 font-black text-[8px] sm:text-[10px] uppercase tracking-wider ${cfg.color} opacity-90`}>
                               <span className="flex items-center gap-1 truncate">
                                 {cfg.icon}
                                 <span className="truncate">{cfg.label}</span>
+                              </span>
+                              <span className="font-mono text-[7px] sm:text-[9px] text-slate-500 font-bold shrink-0 bg-white/80 px-1 py-px rounded" title={`Booking Ref: MOA-BKG-${b.id}`}>
+                                MOA-BKG-{b.id}
                               </span>
                             </div>
 
@@ -508,6 +693,14 @@ export default function CalendarView() {
                             <div className="font-bold text-xs sm:text-[13px] text-slate-900 leading-snug break-words mt-0.5" style={{ fontWeight: 700 }}>
                               {b.eventTitle}
                             </div>
+
+                            {/* Participants count */}
+                            {b.participantCount != null && Number(b.participantCount) > 0 && (
+                              <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold text-slate-600 bg-slate-100/80 px-1.5 py-0.5 rounded border border-slate-200/70 w-fit max-w-full mt-[1px]" title={`${b.participantCount} participants expected`}>
+                                <Users size={8} className="shrink-0 text-slate-500 sm:w-[10px] sm:h-[10px]" />
+                                <span>{b.participantCount} Participants</span>
+                              </div>
+                            )}
 
                             {/* Booking Department — on top of organizer name */}
                             {dept && dept !== 'Protected' && (

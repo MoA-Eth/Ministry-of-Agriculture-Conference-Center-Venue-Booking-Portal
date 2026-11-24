@@ -19,6 +19,7 @@ import AuditLog from '@/components/AuditLog';
 import BusinessRules from '@/components/BusinessRules';
 import BillingAdmin from '@/components/BillingAdmin';
 import ProfileSettings from '@/components/ProfileSettings';
+import ManageDepartments from '@/components/ManageDepartments';
 
 function AppContent() {
   const { role, token } = useApp();
@@ -29,7 +30,7 @@ function AppContent() {
     const [hash] = hashWithQuery.split('?');
     const validPages = [
       'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
-      'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
+      'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 'departments',
       'venue-operations', 'message-center', 'technical-tasks', 'catering-tasks',
       'audit-log', 'business-rules', 'billing-admin', 'profile-settings'
     ];
@@ -59,7 +60,7 @@ function AppContent() {
       
       const validPages = [
         'dashboard', 'calendar', 'venues', 'new-booking', 'vip-booking', 
-        'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 
+        'my-bookings', 'manage-bookings', 'user-management', 'manage-services', 'departments',
         'venue-operations', 'message-center', 'technical-tasks', 'catering-tasks',
         'audit-log', 'business-rules', 'billing-admin', 'profile-settings'
       ];
@@ -105,6 +106,8 @@ function AppContent() {
         return role === 'system_admin' ? <UserManagement /> : <CalendarView />;
       case 'manage-services': 
         return isAdmin ? <ManageServices /> : <CalendarView />;
+      case 'departments':
+        return ['system_admin', 'event_management'].includes(role) ? <ManageDepartments /> : <CalendarView />;
       case 'venue-operations': 
         return isAdmin ? <VenueOperations /> : <CalendarView />;
       case 'message-center': 

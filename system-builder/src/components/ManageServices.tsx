@@ -11,9 +11,10 @@ import { toast } from 'sonner';
 export default function ManageServices() {
   const { 
     technicalServices, supportServices, servicePrices, 
-    addService, removeService, updateServicePrice 
+    addService, removeService, updateServicePrice
   } = useApp();
 
+  // Service Management State
   const [isAdding, setIsAdding] = useState<'technical' | 'support' | null>(null);
   const [newServiceName, setNewServiceName] = useState('');
   const [newServicePrice, setNewServicePrice] = useState('0');
@@ -98,40 +99,47 @@ export default function ManageServices() {
               </div>
 
               <div className="mt-6 relative z-10">
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{type}</p>
-                <h4 className="text-lg font-bold text-slate-800 tracking-tight mb-4">{s.name}</h4>
-                
-                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                <h4 className="text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">{s.name}</h4>
+                <div className="mt-4 flex items-center justify-between">
                   {isEditing ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <div className="relative flex-1">
-                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                         <input 
-                           type="number" 
-                           value={editPrice}
-                           onChange={e => setEditPrice(e.target.value)}
-                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-8 pr-2 text-sm font-bold focus:ring-[#268053] focus:border-[#268053]"
-                           autoFocus
-                         />
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                        <input 
+                          type="number" 
+                          value={editPrice}
+                          onChange={e => setEditPrice(e.target.value)}
+                          className="w-24 pl-6 pr-2 py-1 text-sm bg-slate-50 border border-slate-200 rounded-lg font-bold focus:ring-[#268053]"
+                          autoFocus
+                        />
                       </div>
-                      <button onClick={() => handleUpdatePrice(s.id, s.name, type)} className="p-2 bg-[#268053] text-white rounded-xl shadow-lg shadow-emerald-200">
+                      <button 
+                        onClick={() => handleUpdatePrice(s.id, s.name, type)}
+                        className="p-1.5 bg-[#268053] text-white rounded-lg hover:bg-[#1b6b47]"
+                      >
                         <Check className="w-4 h-4" />
                       </button>
-                      <button onClick={() => setEditingService(null)} className="p-2 bg-slate-100 text-slate-400 rounded-xl">
+                      <button 
+                        onClick={() => setEditingService(null)}
+                        className="p-1.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"
+                      >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
                     <>
-                       <div className="flex items-baseline gap-1">
-                         <span className="text-2xl font-black text-slate-900">{price.toFixed(2)} ETB</span>
-                       </div>
-                       <button 
-                         onClick={() => { setEditingService(s.id); setEditPrice(price.toString()); }}
-                         className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-100 transition-all border border-slate-100"
-                       >
-                         <Edit3 className="w-3 h-3" /> Edit Price
-                       </button>
+                      <span className="text-sm font-black text-slate-800">
+                        {price > 0 ? `${Number(price).toLocaleString()} ETB` : 'Free / Included'}
+                      </span>
+                      <button 
+                        onClick={() => {
+                          setEditingService(s.id);
+                          setEditPrice(price.toString());
+                        }}
+                        className="text-xs font-bold text-slate-400 hover:text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Edit3 className="w-3 h-3" /> Adjust
+                      </button>
                     </>
                   )}
                 </div>
@@ -144,40 +152,47 @@ export default function ManageServices() {
   );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-5">
-           <div className="w-16 h-16 rounded-3xl bg-slate-900 flex items-center justify-center text-emerald-400 shadow-2xl">
+           <div className="w-16 h-16 rounded-3xl bg-slate-900 flex items-center justify-center text-emerald-400 shadow-2xl shrink-0">
               <Zap className="w-8 h-8" />
            </div>
            <div>
-              <h1 className="text-4xl font-serif font-bold text-slate-900 tracking-tight">Manage Services</h1>
-              <p className="text-sm text-slate-500 font-medium">Configure catalog offerings and dynamic pricing</p>
+              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-slate-900 tracking-tight">
+                Manage Services
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                Configure technical and support offerings with dynamic pricing
+              </p>
            </div>
         </div>
         
-        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-           <div className="px-4 py-2 border-r border-slate-100 text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tech</p>
-              <p className="text-lg font-black text-slate-800">{technicalServices.length}</p>
+        {/* Count Badges */}
+        <div className="flex items-center gap-2 sm:gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100 shadow-inner">
+           <div className="px-3 sm:px-4 py-2 border-r border-slate-200 text-center">
+              <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Tech Services</p>
+              <p className="text-base sm:text-lg font-black text-slate-800">{technicalServices.length}</p>
            </div>
-           <div className="px-4 py-2 text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Support</p>
-              <p className="text-lg font-black text-slate-800">{supportServices.length}</p>
+           <div className="px-3 sm:px-4 py-2 text-center">
+              <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Support Services</p>
+              <p className="text-base sm:text-lg font-black text-slate-800">{supportServices.length}</p>
            </div>
         </div>
       </div>
 
-      <div className="space-y-16">
+      <div className="space-y-16 animate-in fade-in duration-300">
         {renderServiceList(technicalServices, 'technical')}
         <div className="h-px bg-slate-100" />
         {renderServiceList(supportServices, 'support')}
       </div>
 
+      {/* MODAL: ADD SERVICE */}
       {isAdding && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-10">
+            <div className="p-8 sm:p-10">
               <div className="flex items-center justify-between mb-8">
                 <div>
                    <h2 className="text-2xl font-serif font-bold text-slate-900">Add {isAdding} Service</h2>
@@ -196,33 +211,33 @@ export default function ManageServices() {
                     value={newServiceName}
                     onChange={e => setNewServiceName(e.target.value)}
                     placeholder="Enter service name..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-4 text-sm font-bold focus:ring-[#268053] focus:border-[#268053] transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold focus:ring-[#268053] focus:border-[#268053] transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Base Unit Price ($)</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Base Unit Price (ETB)</label>
                   <div className="relative">
-                     <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                     <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                      <input 
                        type="number" 
                        value={newServicePrice}
                        onChange={e => setNewServicePrice(e.target.value)}
-                       className="w-full bg-slate-50 border border-slate-200 rounded-3xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-[#268053] focus:border-[#268053] transition-all"
+                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-3 text-sm font-bold focus:ring-[#268053] focus:border-[#268053] transition-all"
                      />
                   </div>
                 </div>
               </div>
 
-              <div className="mt-10 flex gap-4">
+              <div className="mt-8 flex gap-3">
                  <button 
                   onClick={() => setIsAdding(null)}
-                  className="flex-1 py-4 text-slate-400 text-xs font-black uppercase tracking-widest hover:text-slate-600 transition-colors"
+                  className="flex-1 py-3 text-slate-400 text-xs font-black uppercase tracking-widest hover:text-slate-600 transition-colors"
                  >
                    Cancel
                  </button>
                  <button 
                   onClick={handleAdd}
-                  className="flex-[2] bg-slate-900 text-white py-4 rounded-3xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                  className="flex-[2] bg-slate-900 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl"
                  >
                    Register Service
                  </button>

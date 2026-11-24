@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { format, parseISO, eachDayOfInterval, startOfDay } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, Users, CheckCircle2, Paperclip, Sparkles, Receipt, Building2, ShieldAlert, MonitorSmartphone, Coffee, AlertTriangle, Lock, Phone, Utensils, FileText, Info } from 'lucide-react';
 import { EthiopianCalendar, GregorianCalendar } from '@/components/ui/ethiopian-calendar';
+import DepartmentSelect from './DepartmentSelect';
 
 const steps = [
   { num: 1, label: 'DETAILS' },
@@ -605,9 +606,16 @@ export default function NewBookingForm({ onComplete, hideHero = false }: { onCom
                   {errors.organizerName && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerName}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-black uppercase mb-2 block tracking-widest">Organization/Department *</label>
-                  <input value={form.organizerOrganization} onChange={e => setForm(p => ({ ...p, organizerOrganization: e.target.value }))} className={inputClass('organizerOrganization')} placeholder="Organization Name" />
-                  {errors.organizerOrganization && <p className="text-xs text-red-500 mt-1 font-bold">{errors.organizerOrganization}</p>}
+                  <DepartmentSelect
+                    value={form.organizerOrganization}
+                    onChange={(val) => {
+                      setForm(p => ({ ...p, organizerOrganization: val }));
+                      if (errors.organizerOrganization) {
+                        setErrors(p => ({ ...p, organizerOrganization: undefined }));
+                      }
+                    }}
+                    error={errors.organizerOrganization}
+                  />
                 </div>
               </div>
               <div className="grid gap-6 sm:grid-cols-2">

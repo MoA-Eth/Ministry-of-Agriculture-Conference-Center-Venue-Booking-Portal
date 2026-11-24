@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
-import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser } from './types';
+import { Booking, UserRole, TechnicalService, SupportService, Venue, SystemUser, Department } from './types';
 import { toast } from 'sonner';
+
+export const DEFAULT_DEPARTMENTS: Department[] = [];
 
 const isLocal = typeof window !== 'undefined' && (
   window.location.hostname === 'localhost' ||
@@ -22,14 +24,18 @@ interface AppContextType {
   logout: () => void;
   bookings: Booking[];
   venues: Venue[];
+  departments: Department[];
   technicalServices: TechnicalService[];
   supportServices: SupportService[];
   servicePrices: Record<string, number>;
   addBooking: (booking: any) => Promise<any>;
   updateBookingStatus: (id: string, status: Booking['status'], reason?: string) => Promise<void>;
   approveManagement: (id: string, approve: boolean, reason?: string) => Promise<void>;
-  cancelBooking: (id: string) => Promise<void>;
+  cancelBooking: (id: string, reason?: string) => Promise<void>;
+  extendBooking: (id: string, params: { newEndDate?: string; newEndTime?: string; dailySchedules?: any[]; reason?: string }) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
+  addDepartment: (name: string, category?: string) => Promise<void>;
+  removeDepartment: (id: string | number) => Promise<void>;
   addService: (type: 'technical' | 'support', name: string, price: number) => Promise<void>;
   removeService: (type: 'technical' | 'support', id: string) => Promise<void>;
   updateServicePrice: (id: string, name: string, price: number, type: 'technical' | 'support') => Promise<void>;
@@ -124,6 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [departments, setDepartments] = useState<Department[]>(DEFAULT_DEPARTMENTS);
   const [technicalServices, setTechnicalServices] = useState<TechnicalService[]>([]);
   const [supportServices, setSupportServices] = useState<SupportService[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -250,6 +257,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fetch(`${API_BASE}/venues/?_t=${ts}`, { headers }),
           fetch(`${API_BASE}/technical-services/?_t=${ts}`, { headers }),
           fetch(`${API_BASE}/support-services/?_t=${ts}`, { headers }),
+          fetch(`${API_BASE}/departments/?_t=${ts}`, { headers: publicHeaders }).catch(() => null),
           ...(currentToken ? [
             fetch(`${API_BASE}/bookings/?all=true&_t=${ts}`, { headers }),
             fetch(`${API_BASE}/audit-logs/?_t=${ts}`, { headers }),
@@ -259,7 +267,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const responses = await Promise.all(fetchPromises);
 
         // Check if any authenticated response is 401 (Unauthorized)
-        const authResponses = currentToken ? responses.slice(4) : [];
+        const authResponses = currentToken ? responses.slice(5) : [];
         if (authResponses.some((r: any) => r.status === 401)) {
           console.warn("Unauthorized access detected. Clearing invalid token.");
           setToken(null);
@@ -273,10 +281,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const vData       = await responses[1].json();
         const tData       = await responses[2].json();
         const sData       = await responses[3].json();
-        const ownBData    = currentToken ? await responses[4].json() : null;
-        const aData       = currentToken ? await responses[5].json() : [];
+        const dData       = responses[4] && responses[4].ok ? await responses[4].json().catch(() => null) : null;
+        const ownBData    = currentToken && responses[5] ? await responses[5].json() : null;
+        const aData       = currentToken && responses[6] ? await responses[6].json() : [];
 
         const safeArray = (data: any) => Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
+
+        if (dData) {
+          setDepartments(safeArray(dData));
+        }
 
         const publicBookings = safeArray(publicBData).map(mapBooking);
         const ownBookings    = ownBData ? safeArray(ownBData).map(mapBooking) : [];
@@ -527,11 +540,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshData, getHeaders]);
 
-  const cancelBooking = useCallback(async (id: string) => {
+  const cancelBooking = useCallback(async (id: string, reason?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/bookings/${id}/cancel/`, { method: 'PATCH', headers: getHeaders() });
+      const headers = getHeaders();
+      const body = reason ? JSON.stringify({ reason }) : undefined;
+      const res = await fetch(`${API_BASE}/bookings/${id}/cancel/`, {
+        method: 'PATCH',
+        headers,
+        ...(body ? { body } : {})
+      });
       if (res.ok) {
-        toast.success('Booking cancelled');
+        toast.success('Booking cancelled successfully (record retained for audit tracking)');
         refreshData();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -539,6 +558,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       toast.error(error.message || 'Cancellation failed');
+      throw error;
+    }
+  }, [refreshData, getHeaders]);
+
+  const extendBooking = useCallback(async (id: string, params: { newEndDate?: string; newEndTime?: string; dailySchedules?: any[]; reason?: string }) => {
+    try {
+      const headers = getHeaders();
+      const payload: any = {};
+      if (params.newEndDate) payload.new_end_date = params.newEndDate;
+      if (params.newEndTime) payload.new_end_time = params.newEndTime;
+      if (params.dailySchedules) payload.daily_schedules = params.dailySchedules;
+      if (params.reason) payload.reason = params.reason;
+
+      const res = await fetch(`${API_BASE}/bookings/${id}/extend/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        toast.success('Reservation schedule extended successfully');
+        refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.detail || 'Failed to extend reservation');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to extend reservation');
       throw error;
     }
   }, [refreshData, getHeaders]);
@@ -582,6 +628,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toast.success('Service removed');
     } catch (error) {
       toast.error('Failed to remove service');
+    }
+  }, [refreshData, getHeaders]);
+
+  const addDepartment = useCallback(async (name: string, category = 'executive_office') => {
+    try {
+      const res = await fetch(`${API_BASE}/departments/`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ name: name.trim(), category, is_active: true })
+      });
+      if (res.ok) {
+        const itemType = category === 'project' ? 'Project' : 'Ministry Executive Office';
+        toast.success(`${itemType} "${name}" added successfully`);
+        const created = await res.json().catch(() => null);
+        if (created) {
+          setDepartments(prev => {
+            const list = Array.isArray(prev) ? prev : [];
+            const exists = list.some(d => d.id === created.id || d.name.toLowerCase() === created.name.toLowerCase());
+            if (exists) return list.map(d => d.id === created.id ? created : d);
+            return [...list, created];
+          });
+        }
+        refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.name?.[0] || data.error || data.detail || 'Failed to add item');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add item');
+      throw error;
+    }
+  }, [refreshData, getHeaders]);
+
+  const removeDepartment = useCallback(async (id: string | number) => {
+    try {
+      const res = await fetch(`${API_BASE}/departments/${id}/`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      if (res.ok || res.status === 204) {
+        toast.success('Removed successfully');
+        setDepartments(prev => (Array.isArray(prev) ? prev : []).filter(d => d.id !== id));
+        refreshData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to remove item');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to remove item');
+      throw error;
     }
   }, [refreshData, getHeaders]);
 
@@ -686,10 +782,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      role, setRole, token, user, login, register, logout, bookings, venues, addBooking, updateBookingStatus, cancelBooking, deleteBooking,
+      role, setRole, token, user, login, register, logout, bookings, venues, departments, addBooking, updateBookingStatus, cancelBooking, extendBooking, deleteBooking,
       approveManagement,
       technicalServices, supportServices, servicePrices,
       addService, removeService, updateServicePrice,
+      addDepartment, removeDepartment,
       acknowledgeTechnicalTask, toggleTechnicalServiceAvailability, acknowledgeCateringTask, toggleSupportServiceAvailability,
       auditLogs, toEthTime,
       refreshData

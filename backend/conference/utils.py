@@ -10,10 +10,34 @@ def send_automated_email(booking, trigger_type):
     """
     try:
         # 1. Get the template from the database
-        # CRITICAL: trigger_type must exist in EmailTemplate table!
-        template = EmailTemplate.objects.get(trigger=trigger_type)
+        template = EmailTemplate.objects.filter(trigger=trigger_type).first()
+        if not template:
+            default_subjects = {
+                'cancelled': 'Booking Cancelled: {event} (Ref: {ref})',
+                'rejected': 'Booking Request Declined: {event}',
+                'pending': 'Request Received: {event}',
+                'paid': 'Booking Confirmed (Fully Paid): {event}',
+                'approved': 'VIP Booking Approved: {event}',
+            }
+            default_bodies = {
+                'cancelled': (
+                    'Dear {name},\n\nYour booking for "{event}" at {venue} (Ref: {ref}) has been cancelled.\n\n'
+                    'Cancellation Reason:\n{reason}\n\n'
+                    'If you have any questions or require an alternate scheduling arrangement, please contact the Ministry of Agriculture Events team.'
+                ),
+                'rejected': 'Dear {name},\n\nWe regret to inform you that your booking request for {event} could not be accommodated.\n\nReason: {reason}',
+            }
+            if trigger_type in default_subjects:
+                class DummyTemplate:
+                    subject = default_subjects[trigger_type]
+                    body = default_bodies.get(trigger_type, 'Booking update for {event}. Status: {status}.\nReason: {reason}')
+                template = DummyTemplate()
+            else:
+                print(f"[EMAIL ERROR] No database template found for trigger: '{trigger_type}'")
+                return False
 
         # 2. Map placeholders to actual data
+        reason_text = (booking.rejection_reason or '').strip()
         placeholders = {
             '{name}': booking.organizer_name,
             '{event}': booking.event_title,
@@ -21,7 +45,7 @@ def send_automated_email(booking, trigger_type):
             '{date}': booking.start_date.strftime('%B %d, %Y'),
             '{ref}': f"MOA-BKG-{booking.id}",
             '{status}': booking.get_status_display(),
-            '{reason}': booking.rejection_reason or 'No specific reason provided.',
+            '{reason}': reason_text or 'No specific reason provided.',
         }
 
         # 3. Swap placeholders in subject and body
@@ -30,6 +54,14 @@ def send_automated_email(booking, trigger_type):
         for key, value in placeholders.items():
             subject = subject.replace(key, str(value))
             body_text = body_text.replace(key, str(value))
+
+        # Explicitly ensure cancellation reason is present in email body for cancelled trigger
+        if trigger_type == 'cancelled':
+            if '{reason}' not in template.body:
+                if reason_text:
+                    body_text += f"\n\nCancellation Reason:\n{reason_text}"
+                else:
+                    body_text += "\n\nCancellation Reason:\nNo specific reason provided."
 
         # 4. Build a professional HTML version 
         body_html = _build_html_email(subject, body_text, booking, trigger_type)
@@ -175,6 +207,12 @@ def _build_html_email(subject, body_text, booking, trigger_type):
                                                 <div style="font-size: 14px; color: #1a202c; font-weight: 800;">{booking.venue.name}</div>
                                             </td>
                                         </tr>
+                                        {f'''<tr>
+                                            <td style="padding: 14px 0 0 0; border-top: 1px solid #edf2f7;">
+                                                <div style="font-size: 11px; color: #b91c1c; margin-bottom: 6px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Cancellation Reason</div>
+                                                <div style="font-size: 13px; color: #450a0a; font-weight: 600; line-height: 1.5; background-color: #fef2f2; padding: 12px 16px; border-radius: 10px; border-left: 3px solid #ef4444;">{booking.rejection_reason or 'No specific reason provided.'}</div>
+                                            </td>
+                                        </tr>''' if trigger_type == 'cancelled' else ''}
                                     </table>
                                 </td>
                             </tr>

@@ -70,7 +70,7 @@ const getGregDateString = (gregStr: string) => {
   if (!gregStr) return '';
   try {
     const [y, m, d] = gregStr.split('-').map(Number);
-    const gDate = new Date(y, m - 1, d, 12, 0, 0); 
+    const gDate = new Date(y, m - 1, d, 12, 0, 0);
     return format(gDate, 'MMM d, yyyy');
   } catch {
     return gregStr;
@@ -116,93 +116,93 @@ function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: ()
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <div className="bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-br from-[#1b4332] to-[#268053] p-6 sm:p-8 text-white relative shrink-0">
-           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-           <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
-             <CloseIcon size={20} />
-           </button>
-           <div className="relative z-10 pr-12 pt-2 sm:pt-4">
-              <StatusBadge status={booking.status as BookingStatus} />
-              <div className="mt-3 sm:mt-4">
-                <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
-                  {booking.eventTitle}
-                </h2>
-              </div>
-           </div>
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
+          <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-md flex items-center justify-center transition-all z-20">
+            <CloseIcon size={20} />
+          </button>
+          <div className="relative z-10 pr-12 pt-2 sm:pt-4">
+            <StatusBadge status={booking.status as BookingStatus} />
+            <div className="mt-3 sm:mt-4">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-serif font-black text-white tracking-tight drop-shadow-sm uppercase leading-snug break-words px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 inline-block max-w-full">
+                {booking.eventTitle}
+              </h2>
+            </div>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 font-sans custom-scrollbar">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div className="space-y-6">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Event Date & Time</label>
-                  <div className="space-y-3">
-                     <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053]"><Calendar size={20} /></div>
-                        <div>
-                           <p className="text-sm font-black text-slate-900 leading-none mb-1">
-                               {booking.startDate === booking.endDate ? gregDateFull(booking.startDate) : `${gregDateFull(booking.startDate)} — ${gregDateFull(booking.endDate)}`}
-                           </p>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053]"><Clock size={20} /></div>
-                        <div>
-                           <p className="text-sm font-black text-slate-900 leading-none mb-1">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}</p>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule</p>
-                        </div>
-                     </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Event Date & Time</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053]"><Calendar size={20} /></div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 leading-none mb-1">
+                        {booking.startDate === booking.endDate ? gregDateFull(booking.startDate) : `${gregDateFull(booking.startDate)} â€” ${gregDateFull(booking.endDate)}`}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Duration</p>
+                    </div>
                   </div>
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Venue & Capacity</label>
-                  <div className="flex items-start gap-4">
-                     <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><Building size={20} /></div>
-                     <div>
-                        <p className="text-base font-black text-slate-900 leading-tight mb-2 uppercase tracking-tight">{venue?.name || 'Unknown Venue'}</p>
-                        <div className="flex items-center gap-2 text-slate-500 font-bold text-xs"><Users size={14} className="text-[#268053]" /><span>{booking.participantCount} Expected Guests</span></div>
-                     </div>
+                  <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#268053]"><Clock size={20} /></div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 leading-none mb-1">{toEthTime(booking.startTime)} - {toEthTime(booking.endTime)}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Access Schedule</p>
+                    </div>
                   </div>
-               </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Venue & Capacity</label>
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><Building size={20} /></div>
+                  <div>
+                    <p className="text-base font-black text-slate-900 leading-tight mb-2 uppercase tracking-tight">{venue?.name || 'Unknown Venue'}</p>
+                    <div className="flex items-center gap-2 text-slate-500 font-bold text-xs"><Users size={14} className="text-[#268053]" /><span>{booking.participantCount} Expected Guests</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="space-y-6">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Booking Department & Contact</label>
-                  <div className="space-y-3 bg-slate-50 p-5 rounded-xl border border-slate-100">
-                     {dept && dept !== 'Protected' && (
-                       <div className="flex items-start gap-3 pb-3 border-b border-slate-200/70">
-                         <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#1b5e3a] flex items-center justify-center shrink-0 mt-0.5">
-                           <Building2 size={16} />
-                         </div>
-                         <div className="min-w-0 flex-1">
-                           <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Department</p>
-                           <p className="text-xs sm:text-sm font-black text-slate-900 break-words leading-snug">{dept}</p>
-                         </div>
-                       </div>
-                     )}
-                     <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><User size={14} /></div>
-                        <span className="text-sm font-bold text-slate-700">{booking.organizerName}</span>
-                     </div>
-                     <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><Mail size={14} /></div>
-                        <span className="text-xs font-semibold text-slate-500">{booking.organizerEmail}</span>
-                     </div>
-                     {booking.organizerPhone && (
-                       <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><Phone size={14} /></div>
-                          <span className="text-xs font-semibold text-slate-500">{booking.organizerPhone}</span>
-                       </div>
-                     )}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Booking Department & Contact</label>
+                <div className="space-y-3 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                  {dept && dept !== 'Protected' && (
+                    <div className="flex items-start gap-3 pb-3 border-b border-slate-200/70">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#1b5e3a] flex items-center justify-center shrink-0 mt-0.5">
+                        <Building2 size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tight">Booking Department</p>
+                        <p className="text-xs sm:text-sm font-black text-slate-900 break-words leading-snug">{dept}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><User size={14} /></div>
+                    <span className="text-sm font-bold text-slate-700">{booking.organizerName}</span>
                   </div>
-               </div>
-               <div>
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
-                 <div className="bg-[#f8fafc] p-4 rounded-xl border border-slate-100 h-28 overflow-y-auto custom-scrollbar">
-                   <p className="text-sm font-medium text-slate-600 leading-relaxed italic">
-                     {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
-                   </p>
-                 </div>
-               </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><Mail size={14} /></div>
+                    <span className="text-xs font-semibold text-slate-500">{booking.organizerEmail}</span>
+                  </div>
+                  {booking.organizerPhone && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-400"><Phone size={14} /></div>
+                      <span className="text-xs font-semibold text-slate-500">{booking.organizerPhone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Event Overview</label>
+                <div className="bg-[#f8fafc] p-4 rounded-xl border border-slate-100 h-28 overflow-y-auto custom-scrollbar">
+                  <p className="text-sm font-medium text-slate-600 leading-relaxed italic">
+                    {booking.eventDescription ? `"${booking.eventDescription}"` : 'No description provided.'}
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="space-y-6">
               <div>
@@ -239,15 +239,15 @@ function EventDetailsModal({ booking, onClose }: { booking: Booking, onClose: ()
                 </div>
               )}
               <div className="bg-slate-900 rounded-xl p-4 text-white shadow-lg relative overflow-hidden">
-                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full blur-xl" />
-                 <p className="text-white/50 text-[10px] font-black uppercase tracking-widest mb-1 relative z-10">Total Valuation</p>
-                 <p className="text-2xl font-black text-white relative z-10">{booking.totalPrice?.toFixed(2)} ETB</p>
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full blur-xl" />
+                <p className="text-white/50 text-[10px] font-black uppercase tracking-widest mb-1 relative z-10">Total Valuation</p>
+                <p className="text-2xl font-black text-white relative z-10">{booking.totalPrice?.toFixed(2)} ETB</p>
               </div>
             </div>
           </div>
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 shrink-0 flex justify-end">
-           <button onClick={onClose} className="px-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">Close Modal</button>
+          <button onClick={onClose} className="px-8 py-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">Close Modal</button>
         </div>
       </div>
     </div>
@@ -262,24 +262,24 @@ export default function Dashboard() {
 
   // Filtering States
   const [dashDateFrom, setDashDateFrom] = useState<string>('');
-  const [dashDateTo, setDashDateTo]     = useState<string>('');
-  const [showDashCal, setShowDashCal]   = useState(false);
+  const [dashDateTo, setDashDateTo] = useState<string>('');
+  const [showDashCal, setShowDashCal] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  // ─── REAL TODAY ─────────────────────────────────────────────
+  // â”€â”€â”€ REAL TODAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const today = useMemo(() => new Date(), []);
   const todayStr = format(today, 'yyyy-MM-dd');
 
-  // ─── FILTER LOGIC ──────────────────────────────────────────
+  // â”€â”€â”€ FILTER LOGIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const bookings = useMemo(() => {
     return rawBookings.filter(b => {
       const bStatus = (b.status || '').toLowerCase();
       // A booking is "in range" if its event overlaps with the selected window.
       if (dashDateFrom && b.endDate < dashDateFrom) return false;
-      if (dashDateTo   && b.startDate > dashDateTo)   return false;
-      if (selectedVenue  !== 'all' && String(b.venueId) !== String(selectedVenue)) return false;
-      
+      if (dashDateTo && b.startDate > dashDateTo) return false;
+      if (selectedVenue !== 'all' && String(b.venueId) !== String(selectedVenue)) return false;
+
       if (selectedStatus !== 'all') {
         if (selectedStatus === 'pending') {
           if (!['pending', 'reserved'].includes(bStatus)) return false;
@@ -311,10 +311,10 @@ export default function Dashboard() {
     return bookings.filter(b => !['cancelled', 'rejected'].includes((b.status || '').toLowerCase()));
   }, [bookings, selectedStatus]);
 
-  // ─── CORE METRICS ──────────────────────────────────────────
+  // â”€â”€â”€ CORE METRICS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const approvedStatuses = ['management_approved', 'approved', 'partial_paid', 'paid', 'confirmed', 'completed', 'override'];
   const rejectedStatuses = ['rejected', 'cancelled'];
-  const pendingStatuses  = ['pending', 'reserved'];
+  const pendingStatuses = ['pending', 'reserved'];
 
   const isApproved = (b: Booking) => {
     const s = (b.status || '').toLowerCase();
@@ -332,15 +332,15 @@ export default function Dashboard() {
   };
 
   const confirmedCount = bookings.filter(b => ['paid', 'confirmed', 'completed'].includes((b.status || '').toLowerCase())).length;
-  const pendingCount   = bookings.filter(isPending).length;
+  const pendingCount = bookings.filter(isPending).length;
   const completedCount = bookings.filter(b => (b.status || '').toLowerCase() === 'completed').length;
-  const rejectedCount  = bookings.filter(isRejected).length;
-  const approvedCount  = bookings.filter(isApproved).length;
+  const rejectedCount = bookings.filter(isRejected).length;
+  const approvedCount = bookings.filter(isApproved).length;
   const activeBookings = bookings.filter(b => !isRejected(b));
 
   // Total Bookings and Total Participants across all bookings in scope (not active-only)
   const totalBookingsCount = bookings.length;
-  const totalParticipants  = bookings.reduce((s, b) => s + (b.participantCount || 0), 0);
+  const totalParticipants = bookings.reduce((s, b) => s + (b.participantCount || 0), 0);
 
   // Approval Rate: Approved vs Decided (Approved + Rejected/Cancelled)
   const totalDecided = approvedCount + rejectedCount;
@@ -349,13 +349,13 @@ export default function Dashboard() {
     : (bookings.length > 0 && approvedCount > 0 ? 100 : 0);
 
   const approvalSubText = totalDecided > 0
-    ? `${approvedCount} approved · ${rejectedCount} rejected`
+    ? `${approvedCount} approved Â· ${rejectedCount} rejected`
     : (pendingCount > 0 ? `${pendingCount} awaiting approval` : 'No bookings in period');
 
-  // ─── 1. REVENUE ANALYTICS (with Deductions) ────────────────
+  // â”€â”€â”€ 1. REVENUE ANALYTICS (with Deductions) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const calculateAdjustedPrice = (b: Booking) => {
     let deduction = 0;
-    
+
     // Technical Service Deductions
     if (b.ictAcknowledged && b.unavailableTechnicalServices && b.unavailableTechnicalServices.length > 0) {
       b.unavailableTechnicalServices.forEach(id => {
@@ -379,14 +379,14 @@ export default function Dashboard() {
   const confirmedRevenue = activeOnlyBookings
     .filter(b => ['paid', 'confirmed', 'completed', 'approved'].includes(b.status))
     .reduce((sum, b) => sum + calculateAdjustedPrice(b), 0);
-    
+
   const pendingRevenue = activeOnlyBookings
     .filter(b => ['reserved', 'partial_paid', 'pending'].includes(b.status))
     .reduce((sum, b) => sum + calculateAdjustedPrice(b), 0);
-    
+
   const totalProjectedRevenue = confirmedRevenue + pendingRevenue;
 
-  // ─── 2. TODAY'S OCCUPANCY ──────────────────────────────────
+  // â”€â”€â”€ 2. TODAY'S OCCUPANCY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const todayBookings = bookings.filter(b => {
     if (b.status === 'cancelled' || b.status === 'rejected') return false;
     // Check if today falls within start/end range
@@ -402,7 +402,7 @@ export default function Dashboard() {
     ? Math.round((todayOccupiedVenues.size / availableVenues.length) * 100)
     : 0;
 
-  // ─── 3. CONFLICT DETECTION ─────────────────────────────────
+  // â”€â”€â”€ 3. CONFLICT DETECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const conflicts = useMemo(() => {
     return activeBookings.filter((b1, i) =>
       activeBookings.some((b2, j) =>
@@ -410,13 +410,13 @@ export default function Dashboard() {
         b1.venueId === b2.venueId &&
         b1.startDate === b2.startDate &&
         ((b1.startTime >= b2.startTime && b1.startTime < b2.endTime) ||
-         (b2.startTime >= b1.startTime && b2.startTime < b1.endTime))
+          (b2.startTime >= b1.startTime && b2.startTime < b1.endTime))
       )
     );
   }, [activeBookings]);
 
-  // ─── 4. BOOKING STATUS DISTRIBUTION ────────────────────────
-  // Only show active statuses in the pie chart — cancelled/rejected events are excluded
+  // â”€â”€â”€ 4. BOOKING STATUS DISTRIBUTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Only show active statuses in the pie chart â€” cancelled/rejected events are excluded
   const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     activeOnlyBookings.forEach(b => {
@@ -429,20 +429,20 @@ export default function Dashboard() {
     }));
   }, [activeOnlyBookings]);
 
-  // ─── 5. WEEKLY BOOKING STATUS (Daily Breakdown) ───────────
+  // â”€â”€â”€ 5. WEEKLY BOOKING STATUS (Daily Breakdown) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const weeklyStatusData = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
       const d = addDays(today, i);
       const dateStr = format(d, 'yyyy-MM-dd');
       const dayName = format(d, 'EEE');
-      
-      const dayBookings = bookings.filter(b => 
+
+      const dayBookings = bookings.filter(b =>
         (b.startDate <= dateStr && b.endDate >= dateStr) ||
         (b.dailySchedules?.some(ds => ds.date === dateStr))
       );
-      
-      return { 
-        name: dayName, 
+
+      return {
+        name: dayName,
         fullDate: dateStr,
         count: dayBookings.length,
         bookings: dayBookings
@@ -450,7 +450,7 @@ export default function Dashboard() {
     });
   }, [bookings, today]);
 
-  // ─── 6. SERVICE DEMAND ─────────────────────────────────────
+  // â”€â”€â”€ 6. SERVICE DEMAND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const serviceDemandData = useMemo(() => {
     const allServiceIds = [
       ...bookings.flatMap(b => b.technicalServices || []),
@@ -464,12 +464,12 @@ export default function Dashboard() {
       }
     });
     return Object.entries(serviceCounts)
-      .map(([name, value]) => ({ name: name.length > 18 ? name.substring(0, 16) + '…' : name, value }))
+      .map(([name, value]) => ({ name: name.length > 18 ? name.substring(0, 16) + 'â€¦' : name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
   }, [bookings, technicalServices, supportServices]);
 
-  // ─── 7. VENUE USAGE RANKING ────────────────────────────────
+  // â”€â”€â”€ 7. VENUE USAGE RANKING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const venueUsage = useMemo(() => {
     return venues
       .map(v => ({
@@ -483,7 +483,7 @@ export default function Dashboard() {
       .sort((a, b) => b.bookings - a.bookings);
   }, [venues, bookings]);
 
-  // ─── 8. MONTHLY TREND (last 6 months) ──────────
+  // â”€â”€â”€ 8. MONTHLY TREND (last 6 months) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const monthlyTrend = useMemo(() => {
     const todayGreg = new Date();
     const months: { name: string; bookings: number; revenue: number }[] = [];
@@ -491,12 +491,12 @@ export default function Dashboard() {
       const d = new Date(todayGreg.getFullYear(), todayGreg.getMonth() - i, 1);
       const startStr = format(d, 'yyyy-MM-01');
       const endStr = format(new Date(d.getFullYear(), d.getMonth() + 1, 0), 'yyyy-MM-dd');
-      
-      const monthBookings = bookings.filter(b => 
-        b.startDate >= startStr && b.startDate <= endStr && 
+
+      const monthBookings = bookings.filter(b =>
+        b.startDate >= startStr && b.startDate <= endStr &&
         !['cancelled', 'rejected'].includes(b.status)
       );
-      
+
       months.push({
         name: format(d, 'MMM'),
         bookings: monthBookings.length,
@@ -506,7 +506,7 @@ export default function Dashboard() {
     return months;
   }, [bookings]);
 
-  // ─── 10. PRIORITY EVENTS (Next 7 days) ─────────────────────
+  // â”€â”€â”€ 10. PRIORITY EVENTS (Next 7 days) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Shows all operational bookings for the next 7 days, including pending/tentative bookings
   const priorityEvents = useMemo(() => {
     const sevenDaysOut = format(addDays(today, 7), 'yyyy-MM-dd');
@@ -564,7 +564,7 @@ export default function Dashboard() {
 
   useEffect(() => { setCurrentPage(1); }, [priorityEvents.length]);
 
-  // ─── 9. RESOURCE BOTTLENECK ────────────────────────────────
+  // â”€â”€â”€ 9. RESOURCE BOTTLENECK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const resourceInventory: Record<string, number> = {
     'LED Screen / Display': 2, 'Livestreaming': 1,
     'Video Conferencing': 2, 'Photography': 1
@@ -587,11 +587,11 @@ export default function Dashboard() {
     }).filter(Boolean);
   }, [priorityEvents, technicalServices, supportServices]);
 
-  // ─── 11. STAFFING RECOMMENDATIONS ──────────────────────────
+  // â”€â”€â”€ 11. STAFFING RECOMMENDATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const staffing = useMemo(() => {
     const upcomingParticipants = priorityEvents.reduce((s, b) => s + (b.participantCount || 0), 0);
     const avgDailyParticipants = priorityEvents.length > 0 ? upcomingParticipants / 7 : 0;
-    
+
     return {
       ushers: Math.max(1, Math.ceil(avgDailyParticipants / 50)),
       security: Math.max(1, Math.ceil(avgDailyParticipants / 100)),
@@ -599,7 +599,7 @@ export default function Dashboard() {
     };
   }, [priorityEvents]);
 
-  // ─── UTILITY: Gregorian Date Parts ─────────────────────────
+  // â”€â”€â”€ UTILITY: Gregorian Date Parts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getGregParts = (gregStr: string) => {
     try {
       const [y, m, d] = gregStr.split('-').map(Number);
@@ -625,7 +625,7 @@ export default function Dashboard() {
     return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
   };
 
-  // ─── TOP-LEVEL STAT CARDS ──────────────────────────────────
+  // â”€â”€â”€ TOP-LEVEL STAT CARDS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const stats = [
     { label: 'Total Bookings', value: totalBookingsCount, icon: <CalendarCheck className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#112a1f]', border: 'border-emerald-500/20', sub: '' },
     { label: 'Approval Rate', value: `${approvalRate}%`, icon: <Target className="w-6 h-6 text-amber-400" />, bg: 'bg-[#1e1b10]', border: 'border-amber-500/20', sub: approvalSubText },
@@ -633,7 +633,7 @@ export default function Dashboard() {
     ...(isAdmin ? [{ label: 'Confirmed Revenue', value: formatMoney(confirmedRevenue), icon: <Banknote className="w-6 h-6 text-emerald-400" />, bg: 'bg-[#0d2818]', border: 'border-emerald-500/20', sub: 'From approved bookings' }] : []),
   ];
 
-  // ─── CUSTOM TOOLTIP ────────────────────────────────────────
+  // â”€â”€â”€ CUSTOM TOOLTIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -650,43 +650,42 @@ export default function Dashboard() {
     return null;
   };
 
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // RENDER
-  // ═══════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   return (
     <div className="pb-12">
-      
+
       {activeBooking && <EventDetailsModal booking={activeBooking} onClose={() => setActiveBooking(null)} />}
 
       {/* Header */}
       <div className="mb-10 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Analytics Dashboard</h1>
-          <p className="text-slate-500 mt-2 font-medium">Real-time overview of conference center operations — <span className="text-[#268053] font-bold">{getGregDateFull(todayStr)}</span></p>
+          <p className="text-slate-500 mt-2 font-medium">Real-time overview of conference center operations â€” <span className="text-[#268053] font-bold">{getGregDateFull(todayStr)}</span></p>
         </div>
-        
+
         {/* Filter Bar */}
         <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap lg:flex-nowrap items-center gap-3 w-full xl:w-auto">
           <div className="flex items-center gap-2 pl-2 pr-3 border-r border-slate-100 text-slate-400">
             <Filter size={16} /> <span className="text-xs font-bold uppercase tracking-wider">Filters</span>
           </div>
-          
+
           {/* Gregorian Calendar Range Picker */}
           <div className="relative">
             <button
               onClick={() => setShowDashCal(!showDashCal)}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl border transition-all ${
-                dashDateFrom || dashDateTo
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                  : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-emerald-300'
-              }`}
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-xl border transition-all ${dashDateFrom || dashDateTo
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-emerald-300'
+                }`}
             >
               <Calendar size={15} className={dashDateFrom || dashDateTo ? 'text-emerald-500' : 'text-slate-400'} />
               <div className="flex flex-col items-start leading-tight">
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date Range</span>
                 <span className="text-xs font-bold mt-0.5">
                   {dashDateFrom ? format(parseISO(dashDateFrom), 'MMM d, yyyy') : 'Start Date'}
-                  <span className="mx-1 text-slate-300">—</span>
+                  <span className="mx-1 text-slate-300">â€”</span>
                   {dashDateTo ? format(parseISO(dashDateTo), 'MMM d, yyyy') : (dashDateFrom ? 'Select End' : 'End Date')}
                 </span>
               </div>
@@ -708,19 +707,19 @@ export default function Dashboard() {
                         <span className={`px-2 py-0.5 rounded-md ${dashDateFrom ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
                           Start: {dashDateFrom ? format(parseISO(dashDateFrom), 'MMM d, yyyy') : 'None'}
                         </span>
-                        <span className="text-slate-300">→</span>
+                        <span className="text-slate-300">â†’</span>
                         <span className={`px-2 py-0.5 rounded-md ${dashDateTo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
                           End: {dashDateTo ? format(parseISO(dashDateTo), 'MMM d, yyyy') : 'None'}
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => setShowDashCal(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 shrink-0"><CloseIcon size={16}/></button>
+                    <button onClick={() => setShowDashCal(false)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 shrink-0"><CloseIcon size={16} /></button>
                   </div>
                   <GregorianCalendar
                     allowPast={true}
                     selected={{
                       from: dashDateFrom ? new Date(dashDateFrom + 'T12:00:00') : undefined,
-                      to:   dashDateTo   ? new Date(dashDateTo   + 'T12:00:00') : undefined,
+                      to: dashDateTo ? new Date(dashDateTo + 'T12:00:00') : undefined,
                     }}
                     onSelect={range => {
                       if (range.from) {
@@ -782,7 +781,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ═══ TOP LEVEL METRIC CARDS ═══ */}
+      {/* â•â•â• TOP LEVEL METRIC CARDS â•â•â• */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-10">
         {stats.map((s, i) => (
           <ScrollReveal key={s.label} delay={100 * i}>
@@ -811,120 +810,120 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ═══ ROW 2: WEEKLY FORECAST + MONTHLY TREND ═══ */}
+      {/* â•â•â• ROW 2: WEEKLY FORECAST + MONTHLY TREND â•â•â• */}
       <div className="grid gap-8 lg:grid-cols-7 mb-8">
 
         {/* Weekly Forecast Chart */}
         <ScrollReveal className="lg:col-span-4" delay={200}>
           <div className="bg-white rounded-3xl p-8 shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-slate-100 h-full">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#268053] flex items-center justify-center">
-                <TrendingUp className="w-6 h-6" />
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#268053] flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight font-serif">Weekly Booking Status</h3>
+                  <p className="text-sm text-slate-500 font-medium">Breakdown of event statuses for the selected period</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 tracking-tight font-serif">Weekly Booking Status</h3>
-                <p className="text-sm text-slate-500 font-medium">Breakdown of event statuses for the selected period</p>
+              <div className="hidden sm:flex items-center gap-4">
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div><span className="text-[9px] font-black uppercase text-slate-400">Approved</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></div><span className="text-[9px] font-black uppercase text-slate-400">Pending</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></div><span className="text-[9px] font-black uppercase text-slate-400">Rejected</span></div>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-4">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></div><span className="text-[9px] font-black uppercase text-slate-400">Approved</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></div><span className="text-[9px] font-black uppercase text-slate-400">Pending</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></div><span className="text-[9px] font-black uppercase text-slate-400">Rejected</span></div>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={weeklyStatusData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload.length > 0) {
+                      setSelectedDayBookings(data.activePayload[0].payload);
+                    }
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} dy={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="count" fill="#268053" radius={[8, 8, 0, 0]} barSize={36} animationBegin={500} className="cursor-pointer">
+                    {weeklyStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.count > 0 ? '#268053' : '#cbd5e1'} fillOpacity={0.9} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={weeklyStatusData} 
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                onClick={(data) => {
-                  if (data && data.activePayload && data.activePayload.length > 0) {
-                    setSelectedDayBookings(data.activePayload[0].payload);
-                  }
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} dy={10} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" fill="#268053" radius={[8, 8, 0, 0]} barSize={36} animationBegin={500} className="cursor-pointer">
-                  {weeklyStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.count > 0 ? '#268053' : '#cbd5e1'} fillOpacity={0.9} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
           </div>
         </ScrollReveal>
 
         {/* Monthly Booking Trend */}
         <ScrollReveal className="lg:col-span-3" delay={300}>
           <div className="bg-white rounded-3xl p-8 shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col h-full">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
-              <BarChart3 className="w-6 h-6" />
+            <div className="mb-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight font-serif">Monthly Trend</h3>
+                <p className="text-sm text-slate-500 font-medium">Booking frequency (Monthly)</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight font-serif">Monthly Trend</h3>
-              <p className="text-sm text-slate-500 font-medium">Booking frequency (Monthly)</p>
+            <div className="flex-1 min-h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#268053" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#268053" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} dy={10} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="bookings" stroke="#268053" strokeWidth={3} fill="url(#colorBookings)" animationBegin={600} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="flex-1 min-h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#268053" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#268053" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} dy={10} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="bookings" stroke="#268053" strokeWidth={3} fill="url(#colorBookings)" animationBegin={600} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
           </div>
         </ScrollReveal>
       </div>
 
-      {/* ═══ ROW 3: STATUS DISTRIBUTION + SERVICE DEMAND + RESOURCE ALERTS ═══ */}
+      {/* â•â•â• ROW 3: STATUS DISTRIBUTION + SERVICE DEMAND + RESOURCE ALERTS â•â•â• */}
       <div className="grid gap-8 lg:grid-cols-3 mb-8">
 
         {/* Booking Status Distribution */}
         <ScrollReveal delay={400}>
           <div className="bg-white rounded-3xl p-8 shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-slate-100 h-full">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <CalendarCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight font-serif">Status Overview</h3>
-              <p className="text-xs text-slate-500 font-medium">{totalBookingsCount} total bookings</p>
-            </div>
-          </div>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={statusDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
-                  {statusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {statusDistribution.map((s) => (
-              <div key={s.name} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }}></div>
-                <span className="text-[10px] font-bold text-slate-600 truncate">{s.name} ({s.value})</span>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <CalendarCheck className="w-6 h-6" />
               </div>
-            ))}
-          </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight font-serif">Status Overview</h3>
+                <p className="text-xs text-slate-500 font-medium">{totalBookingsCount} total bookings</p>
+              </div>
+            </div>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={statusDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
+                    {statusDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {statusDistribution.map((s) => (
+                <div key={s.name} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }}></div>
+                  <span className="text-[10px] font-bold text-slate-600 truncate">{s.name} ({s.value})</span>
+                </div>
+              ))}
+            </div>
           </div>
         </ScrollReveal>
 
@@ -957,36 +956,36 @@ export default function Dashboard() {
                   const maxVal = serviceDemandData[0]?.value || 1;
                   const percent = Math.round((s.value / maxVal) * 100);
                   const isTech = technicalServices.some(ts => ts.name.includes(s.name) || s.name.includes(ts.name));
-                  
+
                   return (
                     <ScrollReveal key={s.name} delay={100 * i}>
                       <div className="group">
                         <div className="flex justify-between items-end mb-2">
                           <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg ${isTech ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                            {isTech ? <Activity size={12} /> : <Zap size={12} />}
+                            <div className={`p-1.5 rounded-lg ${isTech ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
+                              {isTech ? <Activity size={12} /> : <Zap size={12} />}
+                            </div>
+                            <span className="text-xs font-bold text-slate-700 group-hover:text-[#268053] transition-colors">{s.name}</span>
                           </div>
-                          <span className="text-xs font-bold text-slate-700 group-hover:text-[#268053] transition-colors">{s.name}</span>
+                          <span className="text-[10px] font-black text-slate-400">{s.value} Requests</span>
                         </div>
-                        <span className="text-[10px] font-black text-slate-400">{s.value} Requests</span>
-                      </div>
-                      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden relative">
-                        <div
-                          className="h-full rounded-full transition-all duration-1000 ease-out relative z-10"
-                          style={{ 
-                            width: `${percent}%`, 
-                            background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}, ${COLORS[i % COLORS.length]}dd)` 
-                          }}
-                        >
-                          <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden relative">
+                          <div
+                            className="h-full rounded-full transition-all duration-1000 ease-out relative z-10"
+                            style={{
+                              width: `${percent}%`,
+                              background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}, ${COLORS[i % COLORS.length]}dd)`
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </ScrollReveal>
-                );
-              })}
-            </div>
-          )}
+                    </ScrollReveal>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </ScrollReveal>
 
@@ -1019,9 +1018,9 @@ export default function Dashboard() {
                 auditLogs.slice(0, 15).map((log, i) => {
                   const isCritical = log.action.includes('Delete') || log.action.includes('Reject');
                   const isSuccess = log.action.includes('Confirm') || log.action.includes('Approve');
-                  
+
                   return (
-                    <div key={log.id || i} 
+                    <div key={log.id || i}
                       onClick={() => window.location.hash = `#/audit-log?id=${log.id}`}
                       className="flex gap-4 group cursor-pointer hover:translate-x-1 transition-all duration-300">
                       <div className="flex flex-col items-center">
@@ -1034,7 +1033,7 @@ export default function Dashboard() {
                         <p className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors leading-tight">{log.action}</p>
                         <p className="text-[10px] font-medium text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{log.details}</p>
                         <p className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-wider">
-                          {log.full_name || 'System'} • {toEthTime(log.timestamp)}
+                          {log.full_name || 'System'} â€¢ {toEthTime(log.timestamp)}
                         </p>
                       </div>
                     </div>
@@ -1048,7 +1047,7 @@ export default function Dashboard() {
         </ScrollReveal>
       </div>
 
-      {/* ═══ ROW 4: UPCOMING EVENTS LIST ═══ */}
+      {/* â•â•â• ROW 4: UPCOMING EVENTS LIST â•â•â• */}
       <div className="bg-white rounded-3xl p-8 shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-slate-100 mb-8" style={{ animation: 'fade-in-up 0.6s cubic-bezier(0.16,1,0.3,1) 900ms both' }}>
         <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-4">
@@ -1090,16 +1089,16 @@ export default function Dashboard() {
                 const dateBoxClass = isPendingOrTentative
                   ? 'bg-amber-100 text-amber-700 border-amber-500/20'
                   : isMgmtApproved
-                  ? 'bg-teal-100 text-teal-700 border-teal-500/20'
-                  : isAdvancePaid
-                  ? 'bg-blue-100 text-blue-700 border-blue-500/20'
-                  : isOverride
-                  ? 'bg-purple-100 text-purple-700 border-purple-500/20'
-                  : 'bg-emerald-100 text-emerald-700 border-emerald-500/20';
+                    ? 'bg-teal-100 text-teal-700 border-teal-500/20'
+                    : isAdvancePaid
+                      ? 'bg-blue-100 text-blue-700 border-blue-500/20'
+                      : isOverride
+                        ? 'bg-purple-100 text-purple-700 border-purple-500/20'
+                        : 'bg-emerald-100 text-emerald-700 border-emerald-500/20';
 
                 return (
-                  <div key={b.id} onClick={(e) => { 
-                    e.stopPropagation(); setActiveBooking(b); 
+                  <div key={b.id} onClick={(e) => {
+                    e.stopPropagation(); setActiveBooking(b);
                   }} className={`flex items-center gap-5 p-5 rounded-2xl transition-all duration-300 group cursor-pointer border ${isConflict ? 'bg-red-50/50 border-red-100 hover:border-red-200' : isPendingOrTentative ? 'bg-amber-50/20 border-amber-100/60 hover:bg-white hover:shadow-xl hover:border-amber-300' : 'bg-[#f8fafc] border-transparent hover:bg-white hover:shadow-xl hover:border-emerald-100'}`}>
                     <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border-b-4 ${dateBoxClass}`}>
                       <span className="text-[9px] font-black uppercase leading-none mb-0.5">{greg.month}</span>
@@ -1147,17 +1146,16 @@ export default function Dashboard() {
                           <Users className="w-3 h-3" /> {b.participantCount} Max
                         </div>
                         <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                          <Clock className="w-3 h-3" /> {toEthTime(b.startTime)} – {toEthTime(b.endTime)}
+                          <Clock className="w-3 h-3" /> {toEthTime(b.startTime)} â€“ {toEthTime(b.endTime)}
                         </div>
                       </div>
                     </div>
                     <div className="hidden sm:flex flex-col items-end shrink-0">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        daysAway < 0 ? 'bg-indigo-100 text-indigo-700' :
-                        daysAway === 0 ? 'bg-red-100 text-red-700' : 
-                        daysAway <= 2 ? 'bg-amber-100 text-amber-700' : 
-                        'bg-slate-100 text-slate-600'
-                      }`}>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${daysAway < 0 ? 'bg-indigo-100 text-indigo-700' :
+                        daysAway === 0 ? 'bg-red-100 text-red-700' :
+                          daysAway <= 2 ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
+                        }`}>
                         {daysLabel}
                       </span>
                       {b.totalPrice ? (
@@ -1195,7 +1193,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ═══ ROW 5: VENUE POPULARITY + CAPACITY ═══ */}
+      {/* â•â•â• ROW 5: VENUE POPULARITY + CAPACITY â•â•â• */}
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="bg-white rounded-3xl p-8 shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-slate-100" style={{ animation: 'fade-in-up 0.6s cubic-bezier(0.16,1,0.3,1) 1000ms both' }}>
           <div className="flex items-center gap-4 mb-6">
@@ -1300,8 +1298,8 @@ export default function Dashboard() {
             <div className="p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white">
               {selectedDayBookings.bookings.length === 0 ? (
                 <div className="py-20 text-center">
-                   <Calendar className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                   <p className="text-slate-400 font-medium italic">No events scheduled for this day.</p>
+                  <Calendar className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-400 font-medium italic">No events scheduled for this day.</p>
                 </div>
               ) : (
                 selectedDayBookings.bookings.map(b => {
@@ -1321,8 +1319,8 @@ export default function Dashboard() {
                             </p>
                           )}
                           <div className="flex items-center gap-3 mt-1">
-                             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock size={10} /> {b.startTime} - {b.endTime}</span>
-                             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Building size={10} /> {b.venueName}</span>
+                            <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock size={10} /> {b.startTime} - {b.endTime}</span>
+                            <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Building size={10} /> {b.venueName}</span>
                           </div>
                         </div>
                       </div>
@@ -1333,11 +1331,12 @@ export default function Dashboard() {
               )}
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-               <button onClick={() => setSelectedDayBookings(null)} className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-700 hover:bg-slate-100 transition-all">Close</button>
+              <button onClick={() => setSelectedDayBookings(null)} className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-700 hover:bg-slate-100 transition-all">Close</button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -9,6 +9,7 @@ from django.utils import timezone
 from datetime import datetime, time, timedelta, date
 from django.db.models import Q
 from django.http import JsonResponse
+import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework import viewsets, status, filters
@@ -21,12 +22,13 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 
 from .utils import send_automated_email, log_action, send_event_management_approval_email
-from .models import Venue, TechnicalService, SupportService, Booking, SystemUser, EmailTemplate, AuditLog, SystemSettings, Notification
+from .models import Venue, TechnicalService, SupportService, Booking, SystemUser, EmailTemplate, AuditLog, SystemSettings, Notification, Department
 from .serializers import (
     RegisterSerializer,
     VenueSerializer,
     TechnicalServiceSerializer,
     SupportServiceSerializer,
+    DepartmentSerializer,
     BookingSerializer,
     BookingStatusSerializer,
     SystemUserSerializer,
@@ -292,6 +294,46 @@ class SupportServiceViewSet(viewsets.ModelViewSet):
             )
 
 
+class DepartmentViewSet(viewsets.ModelViewSet):
+    queryset = Department.objects.filter(is_active=True)
+    serializer_class = DepartmentSerializer
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = ['name', 'category']
+    ordering_fields = ['name', 'category', 'created_at']
+    ordering = ['category', 'name']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        try:
+            qs = self.filter_queryset(self.get_queryset())
+            data = self.get_serializer(qs, many=True).data
+            return Response(data if data is not None else [])
+        except Exception:
+            return Response([])
+
+    def create(self, request, *args, **kwargs):
+        role = get_role(request.user)
+        if role not in ('event_management', 'system_admin'):
+            raise PermissionDenied('Only Event Management and System Admins can add Ministry executive offices and projects.')
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        role = get_role(request.user)
+        if role not in ('event_management', 'system_admin'):
+            raise PermissionDenied('Only Event Management and System Admins can update Ministry executive offices and projects.')
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        role = get_role(request.user)
+        if role not in ('event_management', 'system_admin'):
+            raise PermissionDenied('Only Event Management and System Admins can remove Ministry executive offices and projects.')
+        return super().destroy(request, *args, **kwargs)
+
+
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.select_related('venue', 'user').prefetch_related(
         'technical_services', 'support_services'
@@ -365,7 +407,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                 if self.request.query_params.get('exclude_pending', 'false').lower() == 'true':
                     qs = qs.exclude(status='pending')
             elif role == 'organizer':
-                scheduled_q = Q(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved'])
+                scheduled_q = Q(status__in=['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed'])
                 qs = qs.filter(Q(user=user) | scheduled_q).distinct()
             elif role == 'ict_admin':
                 qs = qs.exclude(status__in=['pending', 'rejected', 'management_approved']).filter(technical_services__isnull=False).distinct()
@@ -833,23 +875,194 @@ class BookingViewSet(viewsets.ModelViewSet):
     def cancel(self, request, pk=None):
         booking = self.get_object()
         role = get_role(request.user)
+        old_status = booking.status
 
-        if role == 'organizer' and booking.user != request.user:
-            raise PermissionDenied('You can only cancel your own bookings.')
+        if booking.status == 'cancelled':
+            return Response({'error': 'This booking is already cancelled.'}, status=400)
 
-        if booking.status not in ('pending', 'management_approved', 'partial_paid', 'paid', 'approved'):
-            return Response({'error': 'Only active bookings can be cancelled.'}, status=400)
-
-        # ── Rule: Organizers can only cancel before MoA approval (payment stage) ──────
+        # ── Permission & Business Rules ──────────────────────────────────────────
         if role == 'organizer':
+            if booking.user != request.user:
+                raise PermissionDenied('You can only cancel your own bookings.')
             if booking.status not in ('pending', 'reserved'):
                 return Response(
                     {'error': 'Self-serve cancellation is only permitted before receiving approval from the MoA office. Once your request is approved or reaches the payment stage, please contact MoA Events Management for assistance.'},
                     status=400
                 )
+        elif role not in ('event_management', 'system_admin', 'leadership', 'admin_finance'):
+            raise PermissionDenied('You do not have permission to cancel bookings.')
 
+        # Capture optional reason
+        reason = (request.data.get('reason') or request.data.get('rejection_reason') or '').strip()
         booking.status = 'cancelled'
+        if reason:
+            booking.rejection_reason = reason
         booking.save()
+
+        # Notify the organizer
+        if booking.user:
+            Notification.objects.create(
+                recipient=booking.user,
+                title='Booking Cancelled',
+                message=f"Booking MOA-BKG-{booking.id} ('{booking.event_title}') has been cancelled." + (f" Reason: {reason}" if reason else ""),
+                type='warning',
+                link='#/my-bookings'
+            )
+
+        # Audit Log
+        actor_role_disp = role.replace('_', ' ').title() if role else 'Staff'
+        log_action(
+            request.user,
+            "Booking Cancelled",
+            f"Booking MOA-BKG-{booking.id} ({booking.event_title}) at stage '{old_status}' was cancelled by {actor_role_disp}" + (f". Reason: {reason}" if reason else "."),
+            request=request
+        )
+
+        self._trigger_email(booking, 'cancelled')
+        return Response(BookingSerializer(booking, context={'request': request}).data)
+
+    @action(detail=True, methods=['post', 'patch'], url_path='extend', permission_classes=[IsAuthenticated])
+    def extend(self, request, pk=None):
+        booking = self.get_object()
+        role = get_role(request.user)
+
+        # ── Permission Check ──────────────────────────────────────────
+        if role not in ('event_management', 'system_admin', 'leadership'):
+            raise PermissionDenied('Only Event Management and System Admins can extend venue reservations.')
+
+        if booking.status in ('cancelled', 'rejected'):
+            return Response({'error': f'Cannot extend a {booking.status} booking.'}, status=400)
+
+        new_end_date_str = request.data.get('new_end_date') or request.data.get('endDate')
+        new_end_time_str = request.data.get('new_end_time') or request.data.get('endTime')
+        new_daily_schedules = request.data.get('daily_schedules') or request.data.get('dailySchedules')
+        extension_reason = (request.data.get('reason') or '').strip()
+
+        if not new_end_date_str and not new_end_time_str and not new_daily_schedules:
+            return Response({'error': 'Please provide a new end date, end time, or updated daily schedule to extend the booking.'}, status=400)
+
+        # Parse target dates and times
+        curr_start_date = booking.start_date
+        target_end_date = booking.end_date
+        if new_end_date_str:
+            try:
+                target_end_date = datetime.strptime(str(new_end_date_str), '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'Invalid new_end_date format. Expected YYYY-MM-DD.'}, status=400)
+
+        if target_end_date < curr_start_date:
+            return Response({'error': f'New end date ({target_end_date}) cannot be before the start date ({curr_start_date}).'}, status=400)
+
+        target_start_time = booking.start_time
+        target_end_time = booking.end_time
+        if new_end_time_str:
+            try:
+                h, m = map(int, str(new_end_time_str).split(':')[:2])
+                target_end_time = time(h, m)
+            except ValueError:
+                return Response({'error': 'Invalid new_end_time format. Expected HH:MM.'}, status=400)
+
+        # If on same day and end time before start time
+        if target_end_date == curr_start_date and target_start_time and target_end_time:
+            if target_end_time <= target_start_time:
+                return Response({'error': 'New end time must be after the start time.'}, status=400)
+
+        # Prepare new daily_schedules if extending dates
+        target_daily_schedules = new_daily_schedules if new_daily_schedules is not None else booking.daily_schedules
+        if isinstance(target_daily_schedules, str):
+            try:
+                target_daily_schedules = json.loads(target_daily_schedules)
+            except Exception:
+                target_daily_schedules = []
+
+        # If date is extended and daily_schedules were used previously, ensure extended days exist in daily_schedules
+        if isinstance(target_daily_schedules, list) and len(target_daily_schedules) > 0 and target_end_date > booking.end_date:
+            existing_dates = {ds.get('date') for ds in target_daily_schedules if isinstance(ds, dict)}
+            curr = booking.end_date + timedelta(days=1)
+            while curr <= target_end_date:
+                c_str = curr.strftime('%Y-%m-%d')
+                if c_str not in existing_dates:
+                    target_daily_schedules.append({
+                        'date': c_str,
+                        'startTime': target_start_time.strftime('%H:%M') if target_start_time else '08:30',
+                        'endTime': target_end_time.strftime('%H:%M') if target_end_time else '17:30',
+                        'allDay': False
+                    })
+                curr += timedelta(days=1)
+
+        # ── Conflict Detection ──────────────────────────────────────────
+        # Check against other active bookings for the same venue (exclude self)
+        req_intervals = self._extract_daily_intervals(
+            curr_start_date, target_end_date, target_start_time, target_end_time, target_daily_schedules
+        )
+
+        active_statuses = ['pending', 'management_approved', 'partial_paid', 'paid', 'approved', 'completed']
+        neighbors = Booking.objects.filter(
+            venue=booking.venue,
+            status__in=active_statuses,
+            start_date__lte=target_end_date,
+            end_date__gte=curr_start_date,
+        ).exclude(id=booking.id)
+
+        for neighbor in neighbors:
+            nbr_intervals = self._extract_daily_intervals(
+                neighbor.start_date, neighbor.end_date,
+                neighbor.start_time, neighbor.end_time,
+                neighbor.daily_schedules
+            )
+            common_dates = set(req_intervals.keys()) & set(nbr_intervals.keys())
+            for d in common_dates:
+                for req_st, req_et in req_intervals[d]:
+                    for nbr_st, nbr_et in nbr_intervals[d]:
+                        req_st_dt = datetime.combine(d, req_st)
+                        req_et_dt = datetime.combine(d, req_et)
+                        nbr_st_dt = datetime.combine(d, nbr_st)
+                        nbr_et_dt = datetime.combine(d, nbr_et)
+
+                        if req_st_dt < nbr_et_dt and req_et_dt > nbr_st_dt:
+                            status_disp = neighbor.get_status_display()
+                            return Response({
+                                'error': f"Extension conflict on {d.strftime('%Y-%m-%d')}: the requested time "
+                                         f"({req_st.strftime('%H:%M')} – {req_et.strftime('%H:%M')}) overlaps with existing booking "
+                                         f"'{neighbor.event_title}' ({status_disp}: {nbr_st.strftime('%H:%M')} – {nbr_et.strftime('%H:%M')})."
+                            }, status=400)
+
+        # ── Apply Extension ──────────────────────────────────────────
+        prev_end_date = booking.end_date
+        prev_end_time = booking.end_time
+
+        booking.end_date = target_end_date
+        booking.end_time = target_end_time
+        booking.daily_schedules = target_daily_schedules
+
+        # Recalculate pricing if daily rate is set
+        if booking.venue_daily_rate and booking.venue_daily_rate > 0:
+            total_days = max(1, (booking.end_date - booking.start_date).days + 1)
+            booking.total_price = (booking.venue_daily_rate * total_days) + (booking.service_fees or 0)
+
+        booking.save()
+
+        # Audit Log
+        ext_desc = f"Reservation extended from {prev_end_date} {prev_end_time} to {target_end_date} {target_end_time}"
+        if extension_reason:
+            ext_desc += f". Reason: {extension_reason}"
+        log_action(
+            request.user,
+            "Booking Extended",
+            f"MOA-BKG-{booking.id} ('{booking.event_title}'): {ext_desc}",
+            request=request
+        )
+
+        # Notification to organizer
+        if booking.user:
+            Notification.objects.create(
+                recipient=booking.user,
+                title='Reservation Schedule Extended',
+                message=f"Your booking MOA-BKG-{booking.id} ('{booking.event_title}') has been extended to {target_end_date.strftime('%B %d, %Y')}" + (f" at {target_end_time.strftime('%I:%M %p')}" if target_end_time else "") + f".",
+                type='info',
+                link='#/my-bookings'
+            )
+
         return Response(BookingSerializer(booking, context={'request': request}).data)
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='track')

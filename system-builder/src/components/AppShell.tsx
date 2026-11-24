@@ -25,7 +25,8 @@ import {
   X, 
   Settings,
   Banknote,
-  UserCog
+  UserCog,
+  Landmark
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import moaLogo from '@/assets/moa-logo.png';
@@ -56,6 +57,7 @@ const navItems: NavItem[] = [
   { label: 'VIP Override Booking', icon: <Star size={20} />, id: 'vip-booking', roles: ['event_management', 'system_admin'] },
   { label: 'Manage Bookings', icon: <ShieldCheck size={20} />, id: 'manage-bookings', roles: ['event_management', 'system_admin', 'leadership'] },
   { label: 'Manage Services', icon: <Zap size={20} />, id: 'manage-services', roles: ['event_management', 'system_admin'] },
+  { label: 'Offices & Projects', icon: <Landmark size={20} />, id: 'departments', roles: ['event_management', 'system_admin'] },
   { label: 'Technical Tasks', icon: <Monitor size={20} />, id: 'technical-tasks', roles: ['ict_admin'] },
   { label: 'Catering Tasks', icon: <UtensilsCrossed size={20} />, id: 'catering-tasks', roles: ['catering_support'] },
   { label: 'Message Center', icon: <Mail size={20} />, id: 'message-center', roles: ['system_admin'] },

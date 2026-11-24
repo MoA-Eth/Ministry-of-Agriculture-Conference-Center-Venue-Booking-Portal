@@ -9,6 +9,7 @@ import { useApp, API_BASE, mapBooking } from '@/lib/app-context';
 import { format, isSameDay, isAfter, isBefore, parseISO } from 'date-fns';
 import moaLogo from '@/assets/moa-logo.png';
 import { Booking } from '@/lib/types';
+import VenueWeeklyAvailability from '@/components/VenueWeeklyAvailability';
 
 // Load all images from assets folder except the logo
 const heroModules = import.meta.glob('../assets/*.{png,jpg,jpeg,webp}', { eager: true });
@@ -704,34 +705,29 @@ export default function LandingPage() {
                       <div className="mt-auto pt-4 sm:pt-6 border-t border-slate-50">
 
                         <div className="flex flex-col mb-4 sm:mb-6">
-                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-[#268053] mb-2 sm:mb-3 leading-none">Upcoming Schedule</span>
-
                           {(() => {
-                            if (isOutOfOrder) return <p className="text-[10px] sm:text-xs font-medium text-slate-400 italic">Schedule unavailable</p>;
+                            if (isOutOfOrder) return <p className="text-[10px] sm:text-xs font-medium text-slate-400 italic">Schedule unavailable (out of order)</p>;
 
-                            // NEW CHECK: Protect VIP Schedules
+                            // Protect VIP Schedules
                             if (isVipVenue) return (
                               <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-2.5 sm:p-3 flex items-center gap-2">
                                 <Crown size={14} className="text-purple-400" />
-                                <span className="text-[10px] sm:text-xs font-bold text-purple-600/70">Schedule Restricted</span>
+                                <span className="text-[10px] sm:text-xs font-bold text-purple-600/70">VIP Facility — Schedule Restricted</span>
                               </div>
                             );
 
-                            const upcoming = getUpcomingBookings(venue.id);
-                            if (upcoming.length === 0) {
-                              return <p className="text-[10px] sm:text-xs font-medium text-slate-400 italic">No future bookings scheduled</p>;
-                            }
                             return (
-                              <ScheduleCarousel
-                                bookings={upcoming}
-                                onSelect={(b) => {
+                              <VenueWeeklyAvailability
+                                venueId={venue.id}
+                                venueName={venue.name}
+                                bookings={bookings}
+                                toEthTime={toEthTime}
+                                onSelectBooking={(b) => {
                                   if (isPrivilegedUser) setActiveBooking(b);
                                 }}
-                                toEthTime={toEthTime}
                               />
                             );
                           })()}
-
                         </div>
 
                         <div className="flex flex-col mb-6 sm:mb-8">

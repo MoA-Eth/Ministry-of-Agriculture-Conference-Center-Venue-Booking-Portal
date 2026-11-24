@@ -9,7 +9,7 @@ from .models import (
     Venue, TechnicalService, SupportService, Booking, 
     SystemUser, UserRoleChoices, TaskAllocation, 
     MaintenanceUpdate, EmailTemplate, BookingStatus, AuditLog,
-    SystemSettings, Notification
+    SystemSettings, Notification, Department
 )
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -197,6 +197,11 @@ class TechnicalServiceSerializer(serializers.ModelSerializer):
 class SupportServiceSerializer(serializers.ModelSerializer):
     class Meta: 
         model = SupportService
+        fields = '__all__'
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
         fields = '__all__'
 
 class BookingSerializer(serializers.ModelSerializer):

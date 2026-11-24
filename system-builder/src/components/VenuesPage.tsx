@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import VenueWeeklyAvailability from './VenueWeeklyAvailability';
 
 const typeBadgeStyles: Record<string, string> = {
   'Cinema': 'bg-indigo-100 text-indigo-700 border-indigo-200',
@@ -115,7 +116,7 @@ function VenueDetailsModal({ venue, onClose, technicalServices, supportServices,
 }
 
 export default function VenuesPage() {
-  const { venues, bookings, role, token, refreshData, technicalServices = [], supportServices = [] } = useApp();
+  const { venues, bookings, role, token, refreshData, technicalServices = [], supportServices = [], toEthTime } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // --- VIP ROOM SECURITY FILTER ---
@@ -508,6 +509,18 @@ export default function VenuesPage() {
                   </div>
 
                 </div>
+
+                {/* 7-Day Availability & Available Slots */}
+                {!isOutOfOrder && (
+                  <div className="mt-4">
+                    <VenueWeeklyAvailability
+                      venueId={venue.id}
+                      venueName={venue.name}
+                      bookings={bookings}
+                      toEthTime={toEthTime}
+                    />
+                  </div>
+                )}
                 
                 <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
                   <div className="flex items-center gap-6">

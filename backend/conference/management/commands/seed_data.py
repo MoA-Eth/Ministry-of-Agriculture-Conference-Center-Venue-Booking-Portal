@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
-from conference.models import TechnicalService, SupportService, EmailTemplate
+from conference.models import TechnicalService, SupportService, EmailTemplate, Department
 
 class Command(BaseCommand):
-    help = 'Seeds technical services, support services, and official email templates'
+    help = 'Seeds technical services, support services, official email templates, and MoA departments/projects'
 
     def handle(self, *args, **options):
         # 1. SEED TECHNICAL SERVICES
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             {'trigger': 'paid', 'subject': 'Booking Confirmed (Fully Paid): {event}', 'body': 'Dear {name},\n\nThank you for your full payment. Your booking for {event} at {venue} on {date} is now officially confirmed. We look forward to hosting you.'},
             {'trigger': 'approved', 'subject': 'VIP Booking Approved: {event}', 'body': 'Dear {name},\n\nYour VIP priority booking request for {event} at {venue} on {date} has been approved. This time slot is securely reserved for your event.'},
             {'trigger': 'rejected', 'subject': 'Booking Request Rejected: {event}', 'body': 'Dear {name},\n\nWe regret to inform you that your booking request for {event} could not be accommodated. This time slot may have been overridden by a high-priority state event or there is a scheduling conflict.\n\nReason Provided: {reason}\n\nWe apologize for the inconvenience.'},
-            {'trigger': 'cancelled', 'subject': 'Booking Cancelled: {event}', 'body': 'Dear {name},\n\nYour booking for {event} (Ref: {ref}) has been successfully cancelled as per the latest system update.'},
+            {'trigger': 'cancelled', 'subject': 'Booking Cancelled: {event}', 'body': 'Dear {name},\n\nYour booking for {event} (Ref: {ref}) has been cancelled.\n\nCancellation Reason:\n{reason}\n\nIf you have any questions or require an alternate scheduling arrangement, please contact the Ministry of Agriculture Events team.'},
             {'trigger': 'completed', 'subject': 'Thank You: {event} Concluded', 'body': 'Dear {name},\n\nYour event "{event}" at {venue} has successfully concluded. Thank you for choosing the Ministry of Agriculture Conference Center.\n\nWe hope the facility and services met your highest expectations. We look forward to hosting you again.'},
             {'trigger': 'reminder_24h', 'subject': 'Reminder: Your Event Starts Tomorrow!', 'body': 'Dear {name},\n\nThis is a friendly reminder that your event "{event}" at {venue} is scheduled to begin tomorrow. Please ensure all preparations are in place.'},
             {'trigger': 'reminder_48h_pay', 'subject': 'Action Required: Pending Payment for {event}', 'body': 'Dear {name},\n\nYour booking for {event} (Ref: {ref}) is currently pending payment. Please note that unconfirmed bookings may be automatically released or overridden. Kindly complete your payment to secure the venue.'},
@@ -48,4 +48,13 @@ class Command(BaseCommand):
                 defaults={'subject': t['subject'], 'body': t['body']}
             )
 
-        self.stdout.write(self.style.SUCCESS('Successfully seeded Technical Services, Support Services, and Email Templates!'))
+        # 4. SEED MOA DEPARTMENTS & PROJECTS
+        self.stdout.write('Seeding Ministry of Agriculture departments and projects...')
+        from conference.views import DEFAULT_MOA_DEPARTMENTS
+        for dept in DEFAULT_MOA_DEPARTMENTS:
+            Department.objects.update_or_create(
+                name=dept['name'],
+                defaults={'category': dept['category'], 'is_active': True}
+            )
+
+        self.stdout.write(self.style.SUCCESS('Successfully seeded Technical Services, Support Services, Email Templates, and MoA Departments!'))

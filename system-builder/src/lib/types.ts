@@ -39,6 +39,14 @@ export interface SupportService {
   price: number;
 }
 
+export interface Department {
+  id: string | number;
+  name: string;
+  category?: 'executive_office' | 'department' | 'project' | 'agency' | 'other';
+  isActive?: boolean;
+  is_active?: boolean;
+}
+
 export interface DailySchedule {
   date: string;
   startTime: string;

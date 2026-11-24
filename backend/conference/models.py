@@ -97,6 +97,35 @@ class SupportService(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# Ministry Department / Project Model
+# ---------------------------------------------------------------------------
+
+class DepartmentCategory(models.TextChoices):
+    EXECUTIVE_OFFICE = 'executive_office', 'Ministry Executive Office'
+    DEPARTMENT = 'department', 'Ministry Executive Office'
+    PROJECT = 'project', 'Project'
+    AGENCY = 'agency', 'Affiliated Agency'
+    OTHER = 'other', 'Other'
+
+class Department(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    category = models.CharField(
+        max_length=30,
+        choices=DepartmentCategory.choices,
+        default=DepartmentCategory.EXECUTIVE_OFFICE
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
 # Booking
 # ---------------------------------------------------------------------------
 
