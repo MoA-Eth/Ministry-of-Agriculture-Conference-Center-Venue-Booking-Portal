@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
-from conference.models import TechnicalService, SupportService, EmailTemplate, Department
+from conference.models import TechnicalService, SupportService, EmailTemplate
 
 class Command(BaseCommand):
-    help = 'Seeds technical services, support services, official email templates, and MoA departments/projects'
+    help = 'Seeds technical services, support services, and official email templates'
 
     def handle(self, *args, **options):
         # 1. SEED TECHNICAL SERVICES
@@ -48,13 +48,4 @@ class Command(BaseCommand):
                 defaults={'subject': t['subject'], 'body': t['body']}
             )
 
-        # 4. SEED MOA DEPARTMENTS & PROJECTS
-        self.stdout.write('Seeding Ministry of Agriculture departments and projects...')
-        from conference.views import DEFAULT_MOA_DEPARTMENTS
-        for dept in DEFAULT_MOA_DEPARTMENTS:
-            Department.objects.update_or_create(
-                name=dept['name'],
-                defaults={'category': dept['category'], 'is_active': True}
-            )
-
-        self.stdout.write(self.style.SUCCESS('Successfully seeded Technical Services, Support Services, Email Templates, and MoA Departments!'))
+        self.stdout.write(self.style.SUCCESS('Successfully seeded Technical Services, Support Services, and Email Templates!'))
